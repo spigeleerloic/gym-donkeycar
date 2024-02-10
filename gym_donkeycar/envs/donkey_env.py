@@ -212,3 +212,13 @@ class ThunderhillTrackEnv(DonkeyEnv):
 class CircuitLaunchEnv(DonkeyEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(level="circuit_launch", *args, **kwargs)
+
+class SlopeRoadEnv(DonkeyEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(level="slope-road", *args, **kwargs)
+
+class SteepAscentEnv(DonkeyEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(level="steep-ascent", *args, **kwargs)
+
+        
