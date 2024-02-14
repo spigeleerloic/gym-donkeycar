@@ -4,7 +4,6 @@ import numpy as np
 import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from gym_donkeycar.envs.donkey_proc import DonkeyUnityProcess
-from gym_donkeycar.envs.donkey_sim import DonkeyUnitySimContoller
 import time 
 from gym import spaces
 from utils.utils import supply_defaults
@@ -90,8 +89,8 @@ class ConsumptionWrapper(DonkeyEnv):
         observation, reward, done, info = super().step(action)
         # Compute the VSP
         vsp = self._compute_VSP(info)
-        print(f"{info=}")
-        print(f"{done=}")
+        #print(f"{info=}")
+        #print(f"{done=}")
         modified_reward = reward - vsp
 
         # Log the resulting reward

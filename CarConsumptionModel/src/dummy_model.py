@@ -1,11 +1,5 @@
-import os
-import gym
-import gym_donkeycar
 import numpy as np
-import random as rd 
-from gym_donkeycar.envs.donkey_env import DonkeyEnv
 from utils.ConsumptionWrapper import ConsumptionWrapper
-from stable_baselines3 import PPO
 
 
 env = ConsumptionWrapper("steep-ascent")
