@@ -1,17 +1,20 @@
 import logging
 import os
-
-from gym_donkeycar.envs.donkey_sim import DonkeyUnitySimHandler
-
+import math 
 import base64
 import logging
 import time
 import types
+import numpy as np
+
+from PIL import Image
 from io import BytesIO
 from typing import Any, Callable, Dict, List, Tuple, Union
 
-import numpy as np
-from PIL import Image
+from gym_donkeycar.envs.donkey_sim import DonkeyUnitySimHandler
+
+from utils.utils import compute_VSP
+
 
 logger = logging.getLogger(__name__)
 
@@ -74,15 +77,39 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         # Disable reset
         if os.environ.get("RACE") == "True":
             self.over = False
-    
-    @staticmethod
-    def extract_keys(dict_: Dict[str, Any], list_: List[str]) -> Dict[str, Any]:
-        return_dict = {}
-        for key in list_:
-            if key in dict_:
-                return_dict[key] = dict_[key]
-        print(f"{return_dict=}")
-        return return_dict
+
+    def observe(self) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
+        while self.last_received == self.time_received:
+            time.sleep(0.001)
+
+        self.last_received = self.time_received
+        observation = self.image_array
+        done = self.is_game_over()
+        reward = self.calc_reward(done)
+
+        info = {
+            "pos": (self.x, self.y, self.z),
+            "cte": self.cte,
+            "speed": self.speed,
+            "forward_vel": self.forward_vel,
+            "hit": self.hit,
+            "gyro": (self.gyro_x, self.gyro_y, self.gyro_z),
+            "accel": (self.accel_x, self.accel_y, self.accel_z),
+            "vel": (self.vel_x, self.vel_y, self.vel_z),
+            "lidar": (self.lidar),
+            "car": (self.roll, self.pitch, self.yaw),
+            "last_lap_time": self.last_lap_time,
+            "lap_count": self.lap_count,
+            "LocationMarker": self.markers,
+        }
+
+        # Add the second image to the dict
+        if self.image_array_b is not None:
+            info["image_b"] = self.image_array_b
+
+        # self.timer.on_frame()
+
+        return observation, reward, done, info
     
     def on_telemetry(self, message: Dict[str, Any]) -> None:
         
@@ -107,7 +134,7 @@ class DonkeyHandler(DonkeyUnitySimHandler):
                     img_string = message[attr]
                     image = Image.open(BytesIO(base64.b64decode(img_string)))
                     self.image_array_b = np.asarray(image)
-                    
+
                 elif attr == "LocationMarker":
                     self.markers = [tuple() for _ in range(len(message[attr]))]
                     for key, value in message[attr].items():
@@ -116,8 +143,6 @@ class DonkeyHandler(DonkeyUnitySimHandler):
                         print(f"{marker=}")
                 else:
                     setattr(self, attr, message[attr])
-            else:
-                setattr(self, attr, default)
 
         # Handle the special cases
         self.time_received = time.time()
@@ -131,3 +156,13 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             return
 
         self.determine_episode_over()
+
+    def calc_reward(self, done: bool) -> float:
+        
+        if done:
+            return -1.0
+        if self.hit != "none":
+            return -1.0
+        vsp = compute_VSP(self)
+        reward = 0
+        return reward

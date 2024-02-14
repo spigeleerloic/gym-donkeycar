@@ -3,7 +3,7 @@ import argparse
 import uuid
 
 from stable_baselines3 import PPO
-from utils.ConsumptionWrapper import ConsumptionWrapper
+from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 
 
 script_dir = os.path.dirname(__file__)

@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-from utils.ConsumptionWrapper import ConsumptionWrapper  # Assuming this is how you import your environment
+from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 
 # Initialize pygame
 pygame.init()

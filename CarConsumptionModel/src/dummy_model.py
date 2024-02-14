@@ -1,6 +1,5 @@
 import numpy as np
-from utils.ConsumptionWrapper import ConsumptionWrapper
-
+from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 
 env = ConsumptionWrapper("steep-ascent")
 # PLAY

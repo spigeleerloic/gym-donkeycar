@@ -12,7 +12,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback
 
-from utils.ConsumptionWrapper import ConsumptionWrapper
+from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 from utils.callbacks import LogCallback, SaveModelCallback
 
 wandb.login()
