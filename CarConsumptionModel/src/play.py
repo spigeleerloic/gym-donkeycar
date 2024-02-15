@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
 from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
-
+from gym_donkeycar.envs.donkey_env import DonkeyEnv
 # Initialize pygame
 pygame.init()
 
@@ -12,8 +12,8 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Car Control")
 
 # Initialize environment
+#env = DonkeyEnv("mountain_track")
 env = ConsumptionWrapper("steep-ascent")
-
 # PLAY
 obs = env.reset()
 done = False
@@ -50,6 +50,9 @@ while running:
         throttle = - THROTTLE_SENSITIVITY
     else:
         throttle = 0.0
+    
+    if keys[pygame.K_SPACE]:
+        print(info, reward)
 
     action = np.array([steering, throttle])
 

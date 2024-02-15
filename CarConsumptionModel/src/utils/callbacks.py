@@ -15,7 +15,7 @@ class LogCallback(BaseCallback):
         if self.use_wandb:
             wandb.define_metric("episode_reward", step_metric="episode_count")
             wandb.define_metric("episode_length", step_metric="episode_count")
-
+            
         self.use_logs = use_logs
 
         self.logs_dir = "./logs"
@@ -29,7 +29,7 @@ class LogCallback(BaseCallback):
             print(f"Logging to {self.filename}")
             with open(self.filename, "w") as file:
                 ...
-                #file.write("episode_count,episode_reward,episode_length\n")
+                #file.write("episode_count,episode_reward,episode_length,next_marker,max_distance,total_distance,\n")
 
 
     def _on_step(self) -> bool:
@@ -37,6 +37,11 @@ class LogCallback(BaseCallback):
         reward = self.locals['rewards'][0]
         if self.use_wandb:
             wandb.log({"rewards": reward})
+            wandb.log({
+                    "next_marker": self.next_marker,
+                    "total_distance": self.total_distance,
+                    "distance_to_next_marker": self.distance_to_next_marker
+                })
 
         if self.locals['dones'][0]:
 
@@ -63,7 +68,9 @@ class SaveModelCallback(BaseCallback):
         super(SaveModelCallback, self).__init__(verbose)
         self.save_freq = save_freq
         self.episode_count = 0
-        self.model_name = model_name
+
+        current_datetime = datetime.datetime.now()
+        self.model_name = f"{model_name}_{current_datetime.strftime('%Y%m%d%H%M')}"
         self.model = model
 
     def _on_step(self) -> bool:
@@ -75,3 +82,8 @@ class SaveModelCallback(BaseCallback):
             self.model.save(f"../models/{self.model_name}/checkpoint_{self.episode_count}")
 
         return True
+    
+    def get_model_name(self):
+        return self.model_name
+    
+    

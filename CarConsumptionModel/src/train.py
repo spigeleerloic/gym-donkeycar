@@ -80,8 +80,10 @@ if args.logs:
         project="donkey_car"
     )
     callback.append(LogCallback())
-callback.append(SaveModelCallback(model, args.model_name))
+save_callback = SaveModelCallback(model, model_name=args.model_name)
+callback.append(save_callback)
 
 model.learn(total_timesteps=time_steps, callback=callback, progress_bar=True)
     
-model.save(f"../models/{args.model_name}/model")
+save_model_name = save_callback.get_model_name()
+model.save(f"../models/{save_model_name}/model")

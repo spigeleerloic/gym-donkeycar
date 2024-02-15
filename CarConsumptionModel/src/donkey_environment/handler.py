@@ -12,8 +12,10 @@ from io import BytesIO
 from typing import Any, Callable, Dict, List, Tuple, Union
 
 from gym_donkeycar.envs.donkey_sim import DonkeyUnitySimHandler
+from gym_donkeycar.core.fps import FPSTimer
 
 from utils.utils import compute_VSP
+
 
 
 logger = logging.getLogger(__name__)
@@ -59,8 +61,22 @@ def rotate_vec(q, v):
 class DonkeyHandler(DonkeyUnitySimHandler):
 
     def __init__(self, conf: Dict[str, Any]):
-        print("Starting DonkeyHandler") 
+        print("DonkeyHandler init")
         super().__init__(conf)
+        self.next_marker = 1
+        self.max_distance = 0.0
+        self.total_distance = 0.0
+        self.distance_to_next_marker = 0.0
+
+
+    def reset(self) -> None:
+        super().reset()
+        self.next_marker = 1
+        self.max_distance = 0.0
+        self.total_distance = 0.0
+        self.distance_to_next_marker = 0.0
+
+
 
     def determine_episode_over(self):
 
@@ -113,13 +129,6 @@ class DonkeyHandler(DonkeyUnitySimHandler):
     
     def on_telemetry(self, message: Dict[str, Any]) -> None:
         
-        attributes = {
-        "image_b": None, "pos_x": None, "pos_y": None, "pos_z": None,
-        "speed": None, "LocationMarker": [], "gyro_x": None, "gyro_y": None, "gyro_z": None,
-        "accel_x": None, "accel_y": None, "accel_z": None, "vel_x": None, "vel_y": None, "vel_z": None,
-        "roll": None, "pitch": None, "yaw": None, "cte": None, "lidar": None, "hit": None
-        }
-
         img_string = message["image"]
         image = Image.open(BytesIO(base64.b64decode(img_string)))
 
@@ -127,42 +136,100 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.image_array = np.asarray(image)
         self.time_received = time.time()
 
-        # Loop over the attributes
-        for attr, default in attributes.items():
-            if attr in message:
-                if attr == "image_b":
-                    img_string = message[attr]
-                    image = Image.open(BytesIO(base64.b64decode(img_string)))
-                    self.image_array_b = np.asarray(image)
+        if "image_b" in message:
+            img_string_b = message["image_b"]
+            image_b = Image.open(BytesIO(base64.b64decode(img_string_b)))
+            self.image_array_b = np.asarray(image_b)
 
-                elif attr == "LocationMarker":
-                    self.markers = [tuple() for _ in range(len(message[attr]))]
-                    for key, value in message[attr].items():
-                        self.markers[int(key)] = (value["x"], value["y"], value["z"])
-                    for marker in self.markers:
-                        print(f"{marker=}")
-                else:
-                    setattr(self, attr, message[attr])
+        if "pos_x" in message:
+            self.x = message["pos_x"]
+            self.y = message["pos_y"]
+            self.z = message["pos_z"]
 
-        # Handle the special cases
-        self.time_received = time.time()
+        if "speed" in message:
+            self.speed = message["speed"]
+
+        if "LocationMarker" in message:
+            self.markers = [tuple() for _ in range(len(message["LocationMarker"]))]
+            for key, value in message["LocationMarker"].items():
+                self.markers[int(key)] = np.array([value["x"], value["y"], value["z"]])
+
         e = [self.pitch * np.pi / 180.0, self.yaw * np.pi / 180.0, self.roll * np.pi / 180.0]
         q = euler_to_quat(e)
+
         forward = rotate_vec(q, [0.0, 0.0, 1.0])
+
+        # dot
         self.forward_vel = forward[0] * self.vel_x + forward[1] * self.vel_y + forward[2] * self.vel_z
 
-        # Don't update hit once session over
+        if "gyro_x" in message:
+            self.gyro_x = message["gyro_x"]
+            self.gyro_y = message["gyro_y"]
+            self.gyro_z = message["gyro_z"]
+        if "accel_x" in message:
+            self.accel_x = message["accel_x"]
+            self.accel_y = message["accel_y"]
+            self.accel_z = message["accel_z"]
+        if "vel_x" in message:
+            self.vel_x = message["vel_x"]
+            self.vel_y = message["vel_y"]
+            self.vel_z = message["vel_z"]
+
+        if "roll" in message:
+            self.roll = message["roll"]
+            self.pitch = message["pitch"]
+            self.yaw = message["yaw"]
+
+        # Cross track error not always present.
+        # Will be missing if path is not setup in the given scene.
+        # It should be setup in the 4 scenes available now.
+        if "cte" in message:
+            self.cte = message["cte"]
+
+        if "lidar" in message:
+            self.lidar = self.process_lidar_packet(message["lidar"])
+
+        # don't update hit once session over
         if self.over:
             return
+
+        if "hit" in message:
+            self.hit = message["hit"]
 
         self.determine_episode_over()
 
     def calc_reward(self, done: bool) -> float:
+
+        # may add bonus for laps completed?
         
         if done:
             return -1.0
         if self.hit != "none":
             return -1.0
-        vsp = compute_VSP(self)
-        reward = 0
-        return reward
+                
+        position = np.array([self.x, self.y, self.z])
+        if len(self.markers) > 0:
+            distance_to_next_marker = np.linalg.norm(position - self.markers[self.next_marker])
+
+            max_distance = 0.0 
+            total_distance = distance_to_next_marker
+            for i in range(len(self.markers)):
+                distance = np.linalg.norm(self.markers[i] - self.markers[(i + 1) % len(self.markers)])
+                
+                max_distance += distance
+                
+                # next_marker can be the end of the circuit which means no more distance should be added
+                if i >= self.next_marker and self.next_marker != 0:
+                    total_distance += distance
+            
+            self.max_distance = max_distance
+            self.total_distance = total_distance
+            self.distance_to_next_marker = distance_to_next_marker
+
+            threshold = 1.0
+            if distance_to_next_marker < threshold:
+                self.next_marker = (self.next_marker + 1) % len(self.markers)
+
+            normalized_distance = total_distance / max_distance
+            return - normalized_distance 
+        return 0.0
