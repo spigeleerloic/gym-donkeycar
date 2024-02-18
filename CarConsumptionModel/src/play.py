@@ -9,7 +9,7 @@ pygame.init()
 SCREEN_WIDTH = 1280  # Increase the screen width
 SCREEN_HEIGHT = 720  # Increase the screen height
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Car Control")
+pygame.display.set_caption("Play with the Donkey Car environment")
 
 # Initialize environment
 #env = DonkeyEnv("mountain_track")
@@ -80,4 +80,3 @@ while running:
         obs = env.reset()
 
 pygame.quit()
-

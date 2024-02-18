@@ -68,15 +68,12 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.total_distance = 0.0
         self.distance_to_next_marker = 0.0
 
-
     def reset(self) -> None:
         super().reset()
         self.next_marker = 1
         self.max_distance = 0.0
         self.total_distance = 0.0
         self.distance_to_next_marker = 0.0
-
-
 
     def determine_episode_over(self):
 
@@ -117,6 +114,10 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             "last_lap_time": self.last_lap_time,
             "lap_count": self.lap_count,
             "LocationMarker": self.markers,
+            "next_marker": self.next_marker,
+            "max_distance": self.max_distance,
+            "total_distance": self.total_distance,
+            "distance_to_next_marker": self.distance_to_next_marker,
         }
 
         # Add the second image to the dict
@@ -153,6 +154,10 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             self.markers = [tuple() for _ in range(len(message["LocationMarker"]))]
             for key, value in message["LocationMarker"].items():
                 self.markers[int(key)] = np.array([value["x"], value["y"], value["z"]])
+
+        #print(message["distanceToBorder"])
+        #print("x : ", message["closestFence_x"], "y : ", message["closestFence_y"], "z :", message["closestFence_z"])
+        #print("x : ", self.x, "y : ", self.y, "z :", self.z)
 
         e = [self.pitch * np.pi / 180.0, self.yaw * np.pi / 180.0, self.roll * np.pi / 180.0]
         q = euler_to_quat(e)
@@ -213,11 +218,12 @@ class DonkeyHandler(DonkeyUnitySimHandler):
 
             max_distance = 0.0 
             total_distance = distance_to_next_marker
+            distance_marker = []
             for i in range(len(self.markers)):
                 distance = np.linalg.norm(self.markers[i] - self.markers[(i + 1) % len(self.markers)])
                 
                 max_distance += distance
-                
+                distance_marker.append(distance)
                 # next_marker can be the end of the circuit which means no more distance should be added
                 if i >= self.next_marker and self.next_marker != 0:
                     total_distance += distance
@@ -229,7 +235,7 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             threshold = 1.0
             if distance_to_next_marker < threshold:
                 self.next_marker = (self.next_marker + 1) % len(self.markers)
-
+                   
             normalized_distance = total_distance / max_distance
-            return - normalized_distance 
+            return (1.0 - normalized_distance) * self.forward_vel
         return 0.0

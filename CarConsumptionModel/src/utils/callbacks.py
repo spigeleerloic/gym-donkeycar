@@ -26,7 +26,7 @@ class LogCallback(BaseCallback):
         self.filename = f"{self.logs_dir}/{current_datetime.strftime('%Y%m%d%H%M')}.csv"
         
         if self.use_logs:
-            print(f"Logging to {self.filename}")
+            #print(f"Logging to {self.filename}")
             with open(self.filename, "w") as file:
                 ...
                 #file.write("episode_count,episode_reward,episode_length,next_marker,max_distance,total_distance,\n")
@@ -36,12 +36,13 @@ class LogCallback(BaseCallback):
         # Accumulate the reward obtained at each step to calculate total episode reward
         reward = self.locals['rewards'][0]
         if self.use_wandb:
-            wandb.log({"rewards": reward})
             wandb.log({
-                    "next_marker": self.next_marker,
-                    "total_distance": self.total_distance,
-                    "distance_to_next_marker": self.distance_to_next_marker
-                })
+                    "rewards": reward,
+                    "next_marker": self.locals["infos"][0]["next_marker"],
+                    "total_distance": self.locals["infos"][0]["total_distance"],
+                    "distance_to_next_marker": self.locals["infos"][0]["distance_to_next_marker"],
+                    "max_distance": self.locals["infos"][0]["max_distance"],
+                })  
 
         if self.locals['dones'][0]:
 
@@ -70,7 +71,7 @@ class SaveModelCallback(BaseCallback):
         self.episode_count = 0
 
         current_datetime = datetime.datetime.now()
-        self.model_name = f"{model_name}_{current_datetime.strftime('%Y%m%d%H%M')}"
+        self.model_name = f"{model_name}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
         self.model = model
 
     def _on_step(self) -> bool:

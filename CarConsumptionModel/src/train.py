@@ -46,7 +46,10 @@ parser.add_argument("--logs", help="Whether to use logs for the training",
 parser.add_argument("--cte", help="Maximum CTE for the environment",
                     action="store", type=float, dest="cte", default=10)
 
+
+
 args = parser.parse_args()
+
 environment = args.environment
 
 if args.path == "sim_path" and args.multi:
@@ -73,17 +76,19 @@ env = ConsumptionWrapper(environment, conf=conf)
 model = PPO("CnnPolicy", env, verbose=1, batch_size=256)
 
 callback = []
-if args.logs:
-    print("Using logs")
-    run = wandb.init(
-        # Set the project where this run will be logged
-        project="donkey_car"
-    )
-    callback.append(LogCallback())
 save_callback = SaveModelCallback(model, model_name=args.model_name)
 callback.append(save_callback)
+save_model_name = save_callback.get_model_name()
+
+if args.logs:
+    run = wandb.init(
+        # Set the project where this run will be logged
+        project="donkey_car",
+        name=save_model_name,
+    )
+    callback.append(LogCallback())
+
 
 model.learn(total_timesteps=time_steps, callback=callback, progress_bar=True)
     
-save_model_name = save_callback.get_model_name()
 model.save(f"../models/{save_model_name}/model")
