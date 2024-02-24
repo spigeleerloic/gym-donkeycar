@@ -24,7 +24,8 @@ nbr_of_episode = 100
 time_steps = 100000
 
 script_dir = os.path.dirname(__file__)
-default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
+#default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
+default_path = os.path.join(script_dir, '../../../distance_border/donkey_sim.exe')
 
 parser = argparse.ArgumentParser(description='RL algorithm with consumption model applied to donkey car')
 

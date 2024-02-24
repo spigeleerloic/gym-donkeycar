@@ -74,6 +74,21 @@ class SDClient:
             self.th.join()
         if self.s is not None:
             self.s.close()
+    
+    def reconnect(self) -> bool:
+        """
+        try to reconnect to the server several times and return True if successful.
+        """
+        self.stop()
+        for _ in range(5):
+            try:
+                self.connect()
+                self.aborted = False
+                return True
+            except Exception as e:
+                logger.error("Reconnect attempt failed: %s" % e)
+                time.sleep(1)
+        return False
 
     def proc_msg(self, sock: socket.socket) -> None:  # noqa: C901
         """
@@ -103,7 +118,9 @@ class SDClient:
                         logger.warn("socket connection aborted")
                         print("socket connection aborted")
                         self.do_process_msgs = False
-                        break
+                        
+                        #if self.reconnect():
+                            #break
 
                     # we don't technically need to convert from bytes to string
                     # for json.loads, but we do need a string in order to do
@@ -148,7 +165,9 @@ class SDClient:
                     logger.error("problems w sockets!")
 
             except Exception as e:
+                logger.error(f"Exception: {e}")
                 print("Exception:", e)
                 self.aborted = True
                 self.on_msg_recv({"msg_type": "aborted"})
                 break
+    

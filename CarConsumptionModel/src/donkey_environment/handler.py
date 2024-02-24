@@ -16,7 +16,11 @@ from gym_donkeycar.core.fps import FPSTimer
 
 from utils.utils import compute_VSP
 
-
+COLLISION_REWARD = -1000.0
+COEF_COLLISION_REWARD = 1000.0
+DONE_REWARD = 0.0
+CHECKPOINT_REWARD = 0.0
+AVOID_COLLISION_REWARD = 0.0
 
 logger = logging.getLogger(__name__)
 
@@ -63,19 +67,39 @@ class DonkeyHandler(DonkeyUnitySimHandler):
     def __init__(self, conf: Dict[str, Any]):
         print("DonkeyHandler init")
         super().__init__(conf)
+        # simulation
         self.next_marker = 1
-        self.max_distance = 0.0
-        self.total_distance = 0.0
+        self.maximal_distance = 0.0
+        self.distance_towards_objective = 0.0
         self.distance_to_next_marker = 0.0
+        self.distance_to_border = []
+        # reward
+        self.collision_reward = COLLISION_REWARD
+        self.coef_collision_reward = COEF_COLLISION_REWARD
+        self.done_reward = DONE_REWARD
+        self.checkpoint_reward = CHECKPOINT_REWARD
+        self.avoid_collision_reward = AVOID_COLLISION_REWARD
 
     def reset(self) -> None:
         super().reset()
         self.next_marker = 1
-        self.max_distance = 0.0
-        self.total_distance = 0.0
+        self.maximal_distance = 0.0
+        self.distance_towards_objective = 0.0
         self.distance_to_next_marker = 0.0
+        self.distance_to_border = []
+
+        self.collision_reward = COLLISION_REWARD
+        self.coef_collision_reward = COEF_COLLISION_REWARD
+        self.done_reward = DONE_REWARD
+        self.checkpoint_reward = CHECKPOINT_REWARD
+        self.avoid_collision_reward = AVOID_COLLISION_REWARD
+
 
     def determine_episode_over(self):
+
+        if self.next_marker == 0:
+            logger.debug("lap complete")
+            self.over = True
 
         if self.hit != "none":
             logger.debug(f"game over: hit {self.hit}")
@@ -113,11 +137,19 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             "car": (self.roll, self.pitch, self.yaw),
             "last_lap_time": self.last_lap_time,
             "lap_count": self.lap_count,
+            # more information for environment
             "LocationMarker": self.markers,
             "next_marker": self.next_marker,
-            "max_distance": self.max_distance,
-            "total_distance": self.total_distance,
+            "maximal_distance": self.maximal_distance,
+            "distance_towards_objective": self.distance_towards_objective,
             "distance_to_next_marker": self.distance_to_next_marker,
+            "distance_to_border": self.distance_to_border,
+            # reward shaping
+            "collision_reward": self.collision_reward,
+            "coef_collision_reward": self.coef_collision_reward,
+            "done_reward": self.done_reward,
+            "checkpoint_reward": self.checkpoint_reward,
+            "avoid_collision_reward": self.avoid_collision_reward,
         }
 
         # Add the second image to the dict
@@ -155,9 +187,11 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             for key, value in message["LocationMarker"].items():
                 self.markers[int(key)] = np.array([value["x"], value["y"], value["z"]])
 
-        #print(message["distanceToBorder"])
-        #print("x : ", message["closestFence_x"], "y : ", message["closestFence_y"], "z :", message["closestFence_z"])
-        #print("x : ", self.x, "y : ", self.y, "z :", self.z)
+        if "distanceToBorder" in message:
+            self.distance_to_border = []
+            for key, value in message["distanceToBorder"].items():
+                self.distance_to_border.append(value)
+        
 
         e = [self.pitch * np.pi / 180.0, self.yaw * np.pi / 180.0, self.roll * np.pi / 180.0]
         q = euler_to_quat(e)
@@ -204,38 +238,41 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.determine_episode_over()
 
     def calc_reward(self, done: bool) -> float:
-
-        # may add bonus for laps completed?
+        if done and self.hit == "none":
+            return self.done_reward
         
-        if done:
-            return -1.0
-        if self.hit != "none":
-            return -1.0
-                
-        position = np.array([self.x, self.y, self.z])
-        if len(self.markers) > 0:
-            distance_to_next_marker = np.linalg.norm(position - self.markers[self.next_marker])
+        if len(self.markers) <= 0:
+            return 0.0
+        
+        position = np.array([self.x, self.y, self.z])        
+        distance_to_next_marker = np.linalg.norm(position - self.markers[self.next_marker])
 
-            max_distance = 0.0 
-            total_distance = distance_to_next_marker
-            distance_marker = []
-            for i in range(len(self.markers)):
-                distance = np.linalg.norm(self.markers[i] - self.markers[(i + 1) % len(self.markers)])
-                
-                max_distance += distance
-                distance_marker.append(distance)
-                # next_marker can be the end of the circuit which means no more distance should be added
-                if i >= self.next_marker and self.next_marker != 0:
-                    total_distance += distance
+        max_distance = 0.0 
+        distance_towards_objective = distance_to_next_marker
+        distance_marker = []
+        for i in range(len(self.markers)):
+            distance = np.linalg.norm(self.markers[i] - self.markers[(i + 1) % len(self.markers)])
             
-            self.max_distance = max_distance
-            self.total_distance = total_distance
-            self.distance_to_next_marker = distance_to_next_marker
+            max_distance += distance
+            distance_marker.append(distance)
+            # next_marker can be the end of the circuit which means no more distance should be added
+            if i >= self.next_marker and self.next_marker != 0:
+                distance_towards_objective += distance
+        
+        self.maximal_distance = max_distance
+        self.distance_towards_objective = distance_towards_objective
+        self.distance_to_next_marker = distance_to_next_marker
 
-            threshold = 1.0
-            if distance_to_next_marker < threshold:
-                self.next_marker = (self.next_marker + 1) % len(self.markers)
-                   
-            normalized_distance = total_distance / max_distance
-            return (1.0 - normalized_distance) * self.forward_vel
-        return 0.0
+        threshold = 1.0
+        if distance_to_next_marker < threshold:
+            self.next_marker = (self.next_marker + 1) % len(self.markers)
+                
+        normalized_distance = distance_towards_objective / max_distance
+        # ensure 0 <= normalized_distance <= 1
+        if normalized_distance > 1.0:
+            normalized_distance = 1.0
+
+        if self.hit != "none":
+            return self.collision_reward - self.coef_collision_reward * normalized_distance
+        
+        return - normalized_distance 

@@ -486,7 +486,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
         # Normalization factor, real max speed is around 30
         # but only attained on a long straight line
         # max_speed = 10
-
+        print(self.hit)
         if done:
             return -1.0
 

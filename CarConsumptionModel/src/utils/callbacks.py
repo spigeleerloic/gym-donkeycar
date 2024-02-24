@@ -39,9 +39,15 @@ class LogCallback(BaseCallback):
             wandb.log({
                     "rewards": reward,
                     "next_marker": self.locals["infos"][0]["next_marker"],
-                    "total_distance": self.locals["infos"][0]["total_distance"],
+                    "distance_towards_objective": self.locals["infos"][0]["distance_towards_objective"],
                     "distance_to_next_marker": self.locals["infos"][0]["distance_to_next_marker"],
-                    "max_distance": self.locals["infos"][0]["max_distance"],
+                    "maximal_distance": self.locals["infos"][0]["maximal_distance"],
+
+                    "collision_reward": self.locals["infos"][0]["collision_reward"],
+                    "coef_collision_reward": self.locals["infos"][0]["coef_collision_reward"],
+                    "done_reward": self.locals["infos"][0]["done_reward"],
+                    "checkpoint_reward": self.locals["infos"][0]["checkpoint_reward"],
+                    "avoid_collision_reward": self.locals["infos"][0]["avoid_collision_reward"],
                 })  
 
         if self.locals['dones'][0]:
@@ -73,6 +79,8 @@ class SaveModelCallback(BaseCallback):
         current_datetime = datetime.datetime.now()
         self.model_name = f"{model_name}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
         self.model = model
+
+        # TODO : create directory to avoid warnings
 
     def _on_step(self) -> bool:
 

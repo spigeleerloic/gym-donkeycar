@@ -7,6 +7,7 @@ from gym_donkeycar.envs.donkey_proc import DonkeyUnityProcess
 import time 
 from gym import spaces
 from utils.utils import supply_defaults
+import os
 
 from donkey_environment.controller import DonkeyController
 
@@ -28,7 +29,11 @@ class ConsumptionWrapper(DonkeyEnv):
         supply_defaults(conf)
 
         # set logging level
-        logging.basicConfig(level=conf["log_level"])
+        script_dir = os.path.dirname(__file__)
+        logging.basicConfig(filename=os.path.join(script_dir, '../logs/logger.log'),
+                            level=conf["log_level"],
+                            filemode="w")
+        logging.getLogger().setLevel("DEBUG")
 
         logger.debug("DEBUG ON")
         logger.debug(conf)
