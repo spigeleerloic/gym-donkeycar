@@ -11,6 +11,9 @@ from gym_donkeycar.core.message import IMesgHandler
 
 from .client import SDClient
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SimClient(SDClient):
     """
@@ -33,17 +36,20 @@ class SimClient(SDClient):
     def send_now(self, msg: Dict[str, Any]) -> None:  # pytype: disable=signature-mismatch
         # takes a dict input msg, converts to json string
         # and sends immediately. right now, no queue.
+        logger.debug("[sim_client.py] send_now: %s" % msg)
         json_msg = json.dumps(msg)
         super().send_now(json_msg)
 
     def queue_message(self, msg: Dict[str, Any]) -> None:
         # takes a dict input msg, converts to json string
         # and adds to a lossy queue that sends only the last msg
+        logger.debug("[sim_client.py] queue_message: %s" % msg)
         json_msg = json.dumps(msg)
         self.send(json_msg)
 
     def on_msg_recv(self, json_obj: Dict[str, Any]) -> None:
         # pass message on to handler
+        logger.debug("[sim_client.py] on_msg_recv: %s" % json_obj)
         self.msg_handler.on_recv_message(json_obj)
 
     def is_connected(self) -> bool:

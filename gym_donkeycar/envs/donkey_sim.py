@@ -91,11 +91,12 @@ class DonkeyUnitySimContoller:
     def wait_until_loaded(self) -> None:
         time.sleep(0.1)
         while not self.handler.loaded:
-            logger.warning("waiting for sim to start..")
+            logger.warning("[donkey_sim.py] waiting for sim to start..")
             time.sleep(1.0)
-        logger.info("sim started!")
+        logger.info("[donkey_sim.py] sim started!")
 
     def reset(self) -> None:
+        logger.debug("[donkey_sim.py] resetting car")
         self.handler.reset()
 
     def get_sensor_size(self) -> Tuple[int, int, int]:
@@ -105,6 +106,7 @@ class DonkeyUnitySimContoller:
         self.handler.take_action(action)
 
     def observe(self) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
+        logger.debug("[donkey_sim.py] observing states")
         return self.handler.observe()
 
     def quit(self) -> None:
@@ -191,18 +193,18 @@ class DonkeyUnitySimHandler(IMesgHandler):
         self.lap_count = 0
 
     def on_connect(self, client: SimClient) -> None:  # pytype: disable=signature-mismatch
-        logger.debug("socket connected")
+        logger.debug("[donkey_sim.py] socket connected")
         self.client = client
 
     def on_disconnect(self) -> None:
-        logger.debug("socket disconnected")
+        logger.debug("[donkey_sim.py] socket disconnected")
         self.client = None
 
     def on_abort(self, message: Dict[str, Any]) -> None:
         self.client.stop()
 
     def on_need_car_config(self, message: Dict[str, Any]) -> None:
-        logger.info("on need car config")
+        logger.info("[donkey_sim.py] on need car config")
         self.loaded = True
         self.send_config(self.conf)
 
@@ -216,7 +218,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
             self.current_lap_time = time_at_crossing
             self.lap_count += 1
             lap_msg = f"New lap time: {round(self.last_lap_time, 2)} seconds"
-            logger.info(lap_msg)
+            logger.debug(f"[donkey_sim.py] {lap_msg}")
 
     @staticmethod
     def extract_keys(dict_: Dict[str, Any], list_: List[str]) -> Dict[str, Any]:
@@ -230,12 +232,12 @@ class DonkeyUnitySimHandler(IMesgHandler):
         if "degPerSweepInc" in conf:
             raise ValueError("LIDAR config keys were renamed to use snake_case name instead of CamelCase")
 
-        logger.info("sending car config.")
+        logger.info("[donkey_sim.py] sending car config.")
         # both ways work, car_config shouldn't interfere with other config, so keeping the two alternative
         self.set_car_config(conf)
         if "car_config" in conf.keys():
             self.set_car_config(conf["car_config"])
-            logger.info("done sending car config.")
+            logger.info("[donkey_sim.py] done sending car config.")
 
         if "cam_config" in conf.keys():
             cam_config = self.extract_keys(
@@ -257,7 +259,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
                 ],
             )
             self.send_cam_config(**cam_config)
-            logger.info(f"done sending cam config. {cam_config}")
+            logger.info(f"[donkey_sim.py] done sending cam config. {cam_config}")
 
         if "cam_config_b" in conf.keys():
             cam_config_b = self.extract_keys(
@@ -279,7 +281,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
                 ],
             )
             self.send_cam_config(**cam_config_b, msg_type="cam_config_b")
-            logger.info(f"done sending cam config B. {cam_config_b}")
+            logger.info(f"[donkey_sim.py] done sending cam config B. {cam_config_b}")
             self.image_array_b = np.zeros(self.camera_img_size)
 
         if "lidar_config" in conf.keys():
@@ -302,7 +304,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
                 ],
             )
             self.send_lidar_config(**lidar_config)
-            logger.info(f"done sending lidar config., {lidar_config}")
+            logger.info(f"[donkey_sim.py] done sending lidar config., {lidar_config}")
 
         # what follows is needed in order not to break older conf
 
@@ -326,7 +328,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
         )
         if cam_config != {}:
             self.send_cam_config(**cam_config)
-            logger.info(f"done sending cam config. {cam_config}")
+            logger.info(f"[donkey_sim.py] done sending cam config. {cam_config}")
             logger.warning(
                 """This way of passing cam_config is deprecated,
                 please wrap the parameters in a sub-dictionary with the key 'cam_config'.
@@ -352,7 +354,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
         )
         if lidar_config != {}:
             self.send_lidar_config(**lidar_config)
-            logger.info(f"done sending lidar config., {lidar_config}")
+            logger.info(f"[donkey_sim.py] done sending lidar config., {lidar_config}")
             logger.warning(
                 """This way of passing lidar_config is deprecated,
                 please wrap the parameters in a sub-dictionary with the key 'lidar_config'.
@@ -381,15 +383,15 @@ class DonkeyUnitySimHandler(IMesgHandler):
             )
 
     def on_recv_message(self, message: Dict[str, Any]) -> None:
+        logger.debug("[donkey_sim.py] received message :" + str(message))
         if "msg_type" not in message:
             logger.warn("expected msg_type field")
             return
         msg_type = message["msg_type"]
-        logger.debug("got message :" + msg_type)
         if msg_type in self.fns:
             self.fns[msg_type](message)
         else:
-            logger.warning(f"unknown message type {msg_type}")
+            logger.warning(f"[donkey_sim.py] unknown message type {msg_type}")
 
     # ------- Env interface ---------- #
 
@@ -467,7 +469,6 @@ class DonkeyUnitySimHandler(IMesgHandler):
             info["image_b"] = self.image_array_b
 
         # self.timer.on_frame()
-
         return observation, reward, done, info
 
     def is_game_over(self) -> bool:
@@ -486,7 +487,6 @@ class DonkeyUnitySimHandler(IMesgHandler):
         # Normalization factor, real max speed is around 30
         # but only attained on a long straight line
         # max_speed = 10
-        print(self.hit)
         if done:
             return -1.0
 
@@ -507,6 +507,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
     # ------ Socket interface ----------- #
 
     def on_telemetry(self, message: Dict[str, Any]) -> None:
+        logger.debug("[donkey_sim.py] telemetry received" + str(message))
         img_string = message["image"]
         image = Image.open(BytesIO(base64.b64decode(img_string)))
 
@@ -572,20 +573,20 @@ class DonkeyUnitySimHandler(IMesgHandler):
         self.determine_episode_over()
 
     def on_cross_start(self, message: Dict[str, Any]) -> None:
-        logger.info(f"crossed start line: lap_time {message['lap_time']}")
+        logger.info(f"[donkey_sim.py] crossed start line: lap_time {message['lap_time']}")
 
     def on_race_start(self, message: Dict[str, Any]) -> None:
-        logger.debug("race started")
+        logger.debug("[donkey_sim.py] race started")
 
     def on_race_stop(self, message: Dict[str, Any]) -> None:
-        logger.debug("race stoped")
+        logger.debug("[donkey_sim.py] race stoped")
 
     def on_missed_checkpoint(self, message: Dict[str, Any]) -> None:
-        logger.info("racer missed checkpoint")
+        logger.info("[donkey_sim.py] racer missed checkpoint")
         self.missed_checkpoint = True
 
     def on_DQ(self, message: Dict[str, Any]) -> None:
-        logger.info("racer DQ")
+        logger.info("[donkey_sim.py] racer DQ")
         self.dq = True
 
     def on_ping(self, message: Dict[str, Any]) -> None:
@@ -599,7 +600,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
         allow userd to define their own episode over function
         """
         self.determine_episode_over = types.MethodType(ep_over_fn, self)
-        logger.debug("custom ep_over fn set.")
+        logger.debug("[donkey_sim.py] custom ep_over fn set.")
 
     def determine_episode_over(self):
         # we have a few initial frames on start that are sometimes very large CTE when it's behind
@@ -607,16 +608,16 @@ class DonkeyUnitySimHandler(IMesgHandler):
         if math.fabs(self.cte) > 2 * self.max_cte:
             pass
         elif math.fabs(self.cte) > self.max_cte:
-            logger.debug(f"game over: cte {self.cte}")
+            logger.debug(f"[donkey_sim.py] game over: cte {self.cte}")
             self.over = True
         elif self.hit != "none":
-            logger.debug(f"game over: hit {self.hit}")
+            logger.debug(f"[donkey_sim.py] game over: hit {self.hit}")
             self.over = True
         elif self.missed_checkpoint:
-            logger.debug("missed checkpoint")
+            logger.debug("[donkey_sim.py] missed checkpoint")
             self.over = True
         elif self.dq:
-            logger.debug("disqualified")
+            logger.debug("[donkey_sim.py] disqualified")
             self.over = True
 
         # Disable reset
@@ -628,21 +629,22 @@ class DonkeyUnitySimHandler(IMesgHandler):
         self.send_get_scene_names()
 
     def on_car_loaded(self, message: Dict[str, Any]) -> None:
-        logger.debug("car loaded")
+        logger.debug("[donkey_sim.py] car loaded")
         self.loaded = True
         # Enable hand brake, so the car doesn't move
         self.send_control(0, 0, 1.0)
         self.on_need_car_config({})
 
     def on_recv_scene_names(self, message: Dict[str, Any]) -> None:
+        logger.debug("[donkey_sim.py] on receive scene names : " + str(message))
         if message:
             names = message["scene_names"]
             logger.debug(f"SceneNames: {names}")
-            print("loading scene", self.SceneToLoad)
+            print("[donkey_sim.py] loading scene", self.SceneToLoad)
             if self.SceneToLoad in names:
                 self.send_load_scene(self.SceneToLoad)
             else:
-                raise ValueError(f"Scene name {self.SceneToLoad} not in scene list {names}")
+                raise ValueError(f"[donkey_sim.py] Scene name {self.SceneToLoad} not in scene list {names}")
 
     def send_control(self, steer: float, throttle: float, brake: float = 0.0) -> None:
         """
@@ -661,6 +663,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
             "throttle": str(throttle),
             "brake": str(brake),
         }
+        logger.debug(f"[donkey_sim.py] sending control to the queue : {msg} at time ( with format 'yyyy-MM-dd HH:mm:ss' ): {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
         self.queue_message(msg)
 
     def send_reset_car(self) -> None:
@@ -672,10 +675,12 @@ class DonkeyUnitySimHandler(IMesgHandler):
         self.queue_message(msg)
 
     def send_load_scene(self, scene_name: str) -> None:
+        logger.debug(f"[donkey_sim.py] send loading scene {scene_name}")
         msg = {"msg_type": "load_scene", "scene_name": scene_name}
         self.queue_message(msg)
 
     def send_exit_scene(self) -> None:
+        logger.debug(f"[donkey_sim.py] send exit scene")
         msg = {"msg_type": "exit_scene"}
         self.queue_message(msg)
 
@@ -844,17 +849,19 @@ class DonkeyUnitySimHandler(IMesgHandler):
         return np.array(reconstructed_lidar_info)
 
     def blocking_send(self, msg: Dict[str, Any]) -> None:
+        logger.debug("[donkey_sim.py] blocking send")
         if self.client is None:
             logger.debug(f"skipping: \n {msg}")
             return
 
-        logger.debug(f"blocking send \n {msg}")
+        logger.debug(f"[donkey_sim.py] blocking send \n {msg}")
         self.client.send_now(msg)
 
     def queue_message(self, msg: Dict[str, Any]) -> None:
+        logger.debug("[donkey_sim.py] queuing message")
         if self.client is None:
             logger.debug(f"skipping: \n {msg}")
             return
 
-        logger.debug(f"sending \n {msg}")
+        logger.debug(f"[donkey_sim.py] sending \n {msg}")
         self.client.queue_message(msg)

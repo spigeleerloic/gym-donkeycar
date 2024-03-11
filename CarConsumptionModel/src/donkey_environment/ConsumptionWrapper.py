@@ -30,7 +30,7 @@ class ConsumptionWrapper(DonkeyEnv):
 
         # set logging level
         script_dir = os.path.dirname(__file__)
-        logging.basicConfig(filename=os.path.join(script_dir, '../logs/logger.log'),
+        logging.basicConfig(filename=os.path.join(script_dir, '../logs/wrapper.log'),
                             level=conf["log_level"],
                             filemode="w")
         logging.getLogger().setLevel("DEBUG")
@@ -79,5 +79,7 @@ class ConsumptionWrapper(DonkeyEnv):
         observation, reward, done, info = super().step(action)
         #print(f"{info=}")
         #print(f"{done=}")
+        #print(reward)
+        logger.debug(f"return action after step: {action}")   
         return observation, reward, done, info
     

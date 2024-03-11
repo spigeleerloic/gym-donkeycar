@@ -17,7 +17,7 @@ from gym_donkeycar.core.fps import FPSTimer
 from utils.utils import compute_VSP
 
 COLLISION_REWARD = -1000.0
-COEF_COLLISION_REWARD = 1000.0
+COEF_COLLISION_REWARD = 10000.0
 DONE_REWARD = 0.0
 CHECKPOINT_REWARD = 0.0
 AVOID_COLLISION_REWARD = 0.0
@@ -68,42 +68,30 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         print("DonkeyHandler init")
         super().__init__(conf)
         # simulation
+        self.markers = []
         self.next_marker = 1
-        self.maximal_distance = 0.0
+        # compute time in YYYY-MM-DD HH:MM:SS format using local time
+        self.timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         self.distance_towards_objective = 0.0
         self.distance_to_next_marker = 0.0
-        self.distance_to_border = []
-        # reward
-        self.collision_reward = COLLISION_REWARD
-        self.coef_collision_reward = COEF_COLLISION_REWARD
-        self.done_reward = DONE_REWARD
-        self.checkpoint_reward = CHECKPOINT_REWARD
-        self.avoid_collision_reward = AVOID_COLLISION_REWARD
+        self.normalized_distance = 0.0
 
     def reset(self) -> None:
         super().reset()
         self.next_marker = 1
-        self.maximal_distance = 0.0
-        self.distance_towards_objective = 0.0
-        self.distance_to_next_marker = 0.0
-        self.distance_to_border = []
-
-        self.collision_reward = COLLISION_REWARD
-        self.coef_collision_reward = COEF_COLLISION_REWARD
-        self.done_reward = DONE_REWARD
-        self.checkpoint_reward = CHECKPOINT_REWARD
-        self.avoid_collision_reward = AVOID_COLLISION_REWARD
+        self.normalized_distance = 0.0
 
 
     def determine_episode_over(self):
 
-        if self.next_marker == 0:
-            logger.debug("lap complete")
-            self.over = True
-
         if self.hit != "none":
             logger.debug(f"game over: hit {self.hit}")
             self.over = True
+            
+        elif self.next_marker == 0:
+            logger.debug("lap complete")
+            self.over = True
+
         elif self.missed_checkpoint:
             logger.debug("missed checkpoint")
             self.over = True
@@ -114,6 +102,32 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         # Disable reset
         if os.environ.get("RACE") == "True":
             self.over = False
+    
+    def on_car_loaded(self, message: Dict[str, Any]) -> None:
+        logger.debug("car loaded message: %s", message)
+        self.load_information(message)
+        self.loaded = True
+        # Enable hand brake, so the car doesn't move
+        self.send_control(0, 0, 1.0)
+        self.on_need_car_config({})
+
+    def load_information(self, message: Dict[str, Any]) -> None:
+        if "LocationMarker" in message:
+            self.markers = []
+            for marker in message["LocationMarker"]:
+                self.markers.append(np.array([float(marker[0]), float(marker[1]), float(marker[2])]))
+        
+        self.maximal_distance = 0.0
+        self.distance = []
+
+        for i in range(len(self.markers)):
+            distance = np.linalg.norm(self.markers[i] - self.markers[(i + 1) % len(self.markers)])
+            self.maximal_distance += distance
+            self.distance.append(distance)
+        self.cumulated_distance_objective = [0.0 for _ in range(len(self.markers))]
+        for i in range(len(self.markers)):
+            self.cumulated_distance_objective[i] = sum(self.distance[i:])
+
 
     def observe(self) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
         while self.last_received == self.time_received:
@@ -143,13 +157,14 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             "maximal_distance": self.maximal_distance,
             "distance_towards_objective": self.distance_towards_objective,
             "distance_to_next_marker": self.distance_to_next_marker,
-            "distance_to_border": self.distance_to_border,
             # reward shaping
-            "collision_reward": self.collision_reward,
-            "coef_collision_reward": self.coef_collision_reward,
-            "done_reward": self.done_reward,
-            "checkpoint_reward": self.checkpoint_reward,
-            "avoid_collision_reward": self.avoid_collision_reward,
+            "collision_reward": COLLISION_REWARD,
+            "coef_collision_reward": COEF_COLLISION_REWARD,
+            "done_reward": DONE_REWARD,
+            "checkpoint_reward": CHECKPOINT_REWARD,
+            "avoid_collision_reward": AVOID_COLLISION_REWARD,
+            # timestamp
+            "timestamp": self.timestamp,
         }
 
         # Add the second image to the dict
@@ -157,7 +172,7 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             info["image_b"] = self.image_array_b
 
         # self.timer.on_frame()
-
+        logger.debug("sending obs, reward, done info with timestamp : " + str(self.timestamp))
         return observation, reward, done, info
     
     def on_telemetry(self, message: Dict[str, Any]) -> None:
@@ -181,17 +196,6 @@ class DonkeyHandler(DonkeyUnitySimHandler):
 
         if "speed" in message:
             self.speed = message["speed"]
-
-        if "LocationMarker" in message:
-            self.markers = [tuple() for _ in range(len(message["LocationMarker"]))]
-            for key, value in message["LocationMarker"].items():
-                self.markers[int(key)] = np.array([value["x"], value["y"], value["z"]])
-
-        if "distanceToBorder" in message:
-            self.distance_to_border = []
-            for key, value in message["distanceToBorder"].items():
-                self.distance_to_border.append(value)
-        
 
         e = [self.pitch * np.pi / 180.0, self.yaw * np.pi / 180.0, self.roll * np.pi / 180.0]
         q = euler_to_quat(e)
@@ -235,44 +239,45 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         if "hit" in message:
             self.hit = message["hit"]
 
+        if "timestamp" in message:
+            self.timestamp = message["timestamp"]
+
         self.determine_episode_over()
 
     def calc_reward(self, done: bool) -> float:
-        if done and self.hit == "none":
-            return self.done_reward
-        
-        if len(self.markers) <= 0:
-            return 0.0
-        
-        position = np.array([self.x, self.y, self.z])        
-        distance_to_next_marker = np.linalg.norm(position - self.markers[self.next_marker])
 
-        max_distance = 0.0 
-        distance_towards_objective = distance_to_next_marker
-        distance_marker = []
-        for i in range(len(self.markers)):
-            distance = np.linalg.norm(self.markers[i] - self.markers[(i + 1) % len(self.markers)])
-            
-            max_distance += distance
-            distance_marker.append(distance)
-            # next_marker can be the end of the circuit which means no more distance should be added
-            if i >= self.next_marker and self.next_marker != 0:
-                distance_towards_objective += distance
-        
-        self.maximal_distance = max_distance
-        self.distance_towards_objective = distance_towards_objective
-        self.distance_to_next_marker = distance_to_next_marker
-
-        threshold = 1.0
-        if distance_to_next_marker < threshold:
-            self.next_marker = (self.next_marker + 1) % len(self.markers)
-                
-        normalized_distance = distance_towards_objective / max_distance
-        # ensure 0 <= normalized_distance <= 1
-        if normalized_distance > 1.0:
-            normalized_distance = 1.0
 
         if self.hit != "none":
-            return self.collision_reward - self.coef_collision_reward * normalized_distance
+            reward = COLLISION_REWARD - COEF_COLLISION_REWARD * self.normalized_distance
+            logger.debug(f"reward : {reward}")
+            return reward
+        if done:
+            logger.debug("done reward")
+            return DONE_REWARD
         
-        return - normalized_distance 
+        if len(self.markers) <= 0:
+            logger.debug("No markers found")
+            return 0.0
+        
+        position = np.array([self.x, self.y, self.z]) 
+        logger.debug(f"position : {position}")
+        self.distance_to_next_marker = np.linalg.norm(position - self.markers[self.next_marker])
+        logger.debug(f"distance_to_next_marker : {self.distance_to_next_marker}")
+        self.distance_towards_objective = self.distance_to_next_marker + self.cumulated_distance_objective[self.next_marker] 
+        logger.debug(f"distance_towards_objective : {self.distance_towards_objective}")
+
+        threshold = 1.0
+        if self.distance_to_next_marker < threshold:
+            logger.debug(f"checkpoint {self.next_marker} reached")
+            self.next_marker = (self.next_marker + 1) % len(self.markers)
+        
+        normalized_distance = self.distance_towards_objective / self.maximal_distance
+        logger.debug(f"normalized_distance : {normalized_distance}")
+        # ensure 0 <= normalized_distance <= 1
+        self.normalized_distance = normalized_distance
+        if normalized_distance > 1:
+            self.normalized_distance = 1.0
+        logger.debug(f"normalized_distance after bound checking : {self.normalized_distance}")
+
+        logger.debug(f"reward : { - self.normalized_distance}")
+        return - self.normalized_distance

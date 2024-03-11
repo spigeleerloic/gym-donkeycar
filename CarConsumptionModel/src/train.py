@@ -1,6 +1,4 @@
 import os
-import gym
-import gym_donkeycar
 import numpy as np
 import argparse
 import wandb
@@ -25,7 +23,8 @@ time_steps = 100000
 
 script_dir = os.path.dirname(__file__)
 #default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
-default_path = os.path.join(script_dir, '../../../distance_border/donkey_sim.exe')
+#default_path = os.path.join(script_dir, '../../../testing_gym/donkey_sim.exe')
+default_path = os.path.join(script_dir, '../../../udp-simulator/donkey_sim.exe')
 
 parser = argparse.ArgumentParser(description='RL algorithm with consumption model applied to donkey car')
 
@@ -39,7 +38,7 @@ parser.add_argument("--multi", action="store_true", help="start multiple sims at
 parser.add_argument("-n", "--name" , help="name of the model to train", type=str, dest="model_name", required=True)
 
 parser.add_argument("--port", help="port in use for TCP connections",
-                    default=9091, type=int, dest="port")
+                    default=9092, type=int, dest="port")
 
 parser.add_argument("--logs", help="Whether to use logs for the training",
                      action="store_false", dest="logs")
@@ -70,15 +69,16 @@ conf = {
     "bio": "Learning from experiences",
     "guid": str(uuid.uuid4()),
     "max_cte": args.cte,
+    "start_delay": 3,
 }
 
 env = ConsumptionWrapper(environment, conf=conf)
 
 model = PPO("CnnPolicy", env, verbose=1, batch_size=256)
 
-callback = []
+# callback = []
 save_callback = SaveModelCallback(model, model_name=args.model_name)
-callback.append(save_callback)
+# callback.append(save_callback)
 save_model_name = save_callback.get_model_name()
 
 if args.logs:
@@ -87,9 +87,9 @@ if args.logs:
         project="donkey_car",
         name=save_model_name,
     )
-    callback.append(LogCallback())
+    #callback.append(LogCallback())
 
 
-model.learn(total_timesteps=time_steps, callback=callback, progress_bar=True)
+model.learn(total_timesteps=time_steps*10)
     
 model.save(f"../models/{save_model_name}/model")
