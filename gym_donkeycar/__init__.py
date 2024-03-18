@@ -49,7 +49,7 @@ register(id="donkey-thunderhill-track-v0", entry_point="gym_donkeycar.envs.donke
 
 register(id="donkey-circuit-launch-track-v0", entry_point="gym_donkeycar.envs.donkey_env:CircuitLaunchEnv")
 
-register(id="donkey-steep-ascent-v0", entry_point="gym_donkeycar.envs.donkey_env:SteepAscentEnv")
+register(id="donkey-steep-ascent-track-v0", entry_point="gym_donkeycar.envs.donkey_env:SteepAscentEnv")
 
 __all__ = [
     "AvcSparkfunEnv",

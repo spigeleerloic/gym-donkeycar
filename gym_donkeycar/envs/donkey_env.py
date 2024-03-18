@@ -132,11 +132,8 @@ class DonkeyEnv(gym.Env):
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
         for _ in range(self.frame_skip):
-            logger.debug("[donkey_env.py] step 1 : take action")
             self.viewer.take_action(action)
-            logger.debug("[donkey_env.py] step 2 : observe")
             observation, reward, done, info = self.viewer.observe()
-        logger.debug("[donkey_env.py] step 3 : return")
         return observation, reward, done, info
 
     def reset(self) -> np.ndarray:
@@ -152,7 +149,7 @@ class DonkeyEnv(gym.Env):
     def render(self, mode: str = "human", close: bool = False) -> Optional[np.ndarray]:
         if close:
             self.viewer.quit()
-    
+
         return self.viewer.render(mode)
 
     def is_game_over(self) -> bool:
@@ -216,12 +213,6 @@ class CircuitLaunchEnv(DonkeyEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(level="circuit_launch", *args, **kwargs)
 
-class SlopeRoadEnv(DonkeyEnv):
-    def __init__(self, *args, **kwargs):
-        super().__init__(level="slope-road", *args, **kwargs)
-
 class SteepAscentEnv(DonkeyEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(level="steep-ascent", *args, **kwargs)
-
-        
