@@ -1,0 +1,14 @@
+{
+    "speed_controller": {
+        "ultimate_gain": 20.796505671840684,
+        "oscillation_period": 0.4354037523269653,
+        "min_output": -1.0,
+        "max_output": 1.0
+    },
+    "steering_controller": {
+        "ultimate_gain": 2.079650567184068,
+        "oscillation_period": 0.4524764390749352,
+        "min_output": -5.0,
+        "max_output": 5.0
+    }
+}
