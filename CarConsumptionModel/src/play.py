@@ -1,5 +1,10 @@
 import pygame
 import numpy as np
+import sys 
+
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 from gym_donkeycar.envs.donkey_env import DonkeyEnv
 # Initialize pygame
@@ -47,7 +52,7 @@ while running:
     if keys[pygame.K_UP]:
         throttle = THROTTLE_SENSITIVITY
     elif keys[pygame.K_DOWN]:
-        throttle = - THROTTLE_SENSITIVITY
+        throttle = 0.0
     else:
         throttle = 0.0
     

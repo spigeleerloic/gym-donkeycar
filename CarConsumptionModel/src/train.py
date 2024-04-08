@@ -1,6 +1,4 @@
 import os
-import gym
-import gym_donkeycar
 import numpy as np
 import argparse
 import wandb
@@ -11,85 +9,44 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback
+from gym_donkeycar.envs.donkey_env import DonkeyEnv
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from utils.callbacks import CustomProgressBarCallback, SaveObservations
+from gym import spaces
+import gym
+
 
 from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
-from utils.callbacks import LogCallback, SaveModelCallback
 
-wandb.login()
+#env = gym.make("donkey-steep-ascent-track-v0")
+env = ConsumptionWrapper(level="steep-ascent")
+#env = ConsumptionWrapper(level="mountain_track")
 
-mean_reward_episode = 0.0
-rewards = []
+name = "default_reward"
 
-nbr_of_episode = 100
-time_steps = 100000
+checkpoint_callback = CheckpointCallback(
+  save_freq=1000,
+  save_path="../models/",
+  name_prefix=f"{name}",
+  save_replay_buffer=True,
+  save_vecnormalize=True,
+)
 
-script_dir = os.path.dirname(__file__)
-#default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
-default_path = os.path.join(script_dir, '../../../distance_border/donkey_sim.exe')
+custom_progress_bar_callback = CustomProgressBarCallback()
 
-parser = argparse.ArgumentParser(description='RL algorithm with consumption model applied to donkey car')
-
-parser.add_argument("--env_name", help="name of the donkey car environment", 
-                    type=str, dest='environment', default="steep-ascent")
-parser.add_argument("-p", "--path" , help="path to the simulator if it is not running", 
-                    type=str, dest="path", default=default_path)
-
-parser.add_argument("--multi", action="store_true", help="start multiple sims at once")
-
-parser.add_argument("-n", "--name" , help="name of the model to train", type=str, dest="model_name", required=True)
-
-parser.add_argument("--port", help="port in use for TCP connections",
-                    default=9091, type=int, dest="port")
-
-parser.add_argument("--logs", help="Whether to use logs for the training",
-                     action="store_false", dest="logs")
-
-parser.add_argument("--cte", help="Maximum CTE for the environment",
-                    action="store", type=float, dest="cte", default=10)
+save_observation_callback = SaveObservations(save_file="../dataset/observation.csv")
 
 
+callback = CallbackList([checkpoint_callback, custom_progress_bar_callback, save_observation_callback])
 
-args = parser.parse_args()
+#model = PPO("CnnPolicy", env, verbose=1)
 
-environment = args.environment
+model = PPO("CnnPolicy", env, verbose=1)
+model.learn(total_timesteps=100_000, callback=callback)
+model.save(f"../models/{name}")
 
-if args.path == "sim_path" and args.multi:
-    print("you must supply the sim path with --sim when running multiple environments")
-    exit(1)
-
-conf = {
-    "exe_path": args.path,
-    "host": "127.0.0.1",
-    "port": args.port,
-    "body_style": "donkey",
-    "body_rgb": (128, 128, 128),
-    "car_name": args.model_name,
-    "font_size": 100,
-    "racer_name": "PPO",
-    "country": "BEL",
-    "bio": "Learning from experiences",
-    "guid": str(uuid.uuid4()),
-    "max_cte": args.cte,
-}
-
-env = ConsumptionWrapper(environment, conf=conf)
-
-model = PPO("CnnPolicy", env, verbose=1, batch_size=256)
-
-callback = []
-save_callback = SaveModelCallback(model, model_name=args.model_name)
-callback.append(save_callback)
-save_model_name = save_callback.get_model_name()
-
-if args.logs:
-    run = wandb.init(
-        # Set the project where this run will be logged
-        project="donkey_car",
-        name=save_model_name,
-    )
-    callback.append(LogCallback())
-
-
-model.learn(total_timesteps=time_steps, callback=callback, progress_bar=True)
-    
-model.save(f"../models/{save_model_name}/model")
