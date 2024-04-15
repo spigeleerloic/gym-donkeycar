@@ -6,6 +6,8 @@ import os
 import numpy as np
 import math
 
+from donkey_environment.rewards import positive_centering, positive_centering_consumption, negative_centering, negative_centering_consumption, positive_centering_distance
+
 logger = logging.getLogger(__name__)
 
 COLLISION_REWARD = -1000.0
@@ -61,6 +63,8 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.raycast = []
         self.cumulative_consumption = 0.0
         self.objective_reached = False
+        self.reward_function = "positive_centering"
+
 
     def reset(self) -> None:
         super().reset()
@@ -94,9 +98,11 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             self.objective_distance = float(message["distance_to_objective"])
 
         if "rayCastFences" in message:
+            # not really needed
             self.raycast = message["rayCastFences"]
 
         if "distance_to_middle_line" in message:
+            # distance / 10.0f -> not normalized
             self.distance_to_middle_line = float(message["distance_to_middle_line"])
 
         if "vsp" in message:
@@ -106,6 +112,9 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         if "objective_reached" in message:
             self.objective_reached = True
 
+        if "next_marker" in message:
+            self.next_marker = float(message["next_marker"])
+
         super().on_telemetry(message)
 
 
@@ -113,9 +122,22 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         observation, reward, done, info = super().observe()
         # add new information
         info["distance_to_middle_line"] = self.distance_to_middle_line
-        info["raycast"] = self.raycast
+        #info["raycast"] = self.raycast
+        info["objective_reached"] = self.objective_reached
+        info["vsp"] = self.vsp
+        info["next_marker"] = self.next_marker
+        info["cumulative_consumption"] = self.cumulative_consumption
+        info["objective_distance"] = self.objective_distance
 
         return observation, reward, done, info
+    
+    def send_pause(self) -> None:
+        msg = {"msg_type": "pause"}
+        self.blocking_send(msg)
+
+    def send_resume(self) -> None:
+        msg = {"msg_type": "resume"}
+        self.blocking_send(msg)
     
     def compute_distance_to_objective(self) -> float:
         """
@@ -143,18 +165,7 @@ class DonkeyHandler(DonkeyUnitySimHandler):
 
     def calc_reward(self, done: bool) -> float:
 
-        #return super().calc_reward(done)
-        logger.debug(f"calc_reward : {self.hit} \t {done} \t {self.objective_distance}")
-        if self.hit != "none":
-            logger.debug(f"collision reward: {COLLISION_REWARD}")
-            return -1.0
-        
-        elif done:
-            logger.debug(f"done reward: {DONE_REWARD}")
-            return DONE_REWARD
+        return positive_centering(self, done)
 
-        centering_reward_term = math.fabs(self.distance_to_middle_line)
-        reward =  (1.0 - centering_reward_term) * self.forward_vel
-        logger.debug(f"reward: {reward}")
-        return reward
+    
     

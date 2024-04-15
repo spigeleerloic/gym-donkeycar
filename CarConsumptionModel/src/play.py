@@ -19,6 +19,8 @@ pygame.display.set_caption("Play with the Donkey Car environment")
 # Initialize environment
 #env = DonkeyEnv("mountain_track")
 env = ConsumptionWrapper("steep-ascent")
+
+
 # PLAY
 obs = env.reset()
 done = False
@@ -27,7 +29,7 @@ done = False
 steering = 0.0
 throttle = 0.0
 
-STEERING_SENSITIVITY = 0.35
+STEERING_SENSITIVITY = 1.0
 THROTTLE_SENSITIVITY = 1.0
 
 clock = pygame.time.Clock()
@@ -52,12 +54,13 @@ while running:
     if keys[pygame.K_UP]:
         throttle = THROTTLE_SENSITIVITY
     elif keys[pygame.K_DOWN]:
-        throttle = 0.0
+        throttle = - THROTTLE_SENSITIVITY
     else:
         throttle = 0.0
     
     if keys[pygame.K_SPACE]:
-        print(info, reward)
+        print(f"info : {info}")
+        print(f"reward : {reward}")
 
     action = np.array([steering, throttle])
 
@@ -81,7 +84,5 @@ while running:
     # Limit the frame rate
     clock.tick(60)
 
-    if done:
-        obs = env.reset()
 
 pygame.quit()

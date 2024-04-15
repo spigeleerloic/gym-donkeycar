@@ -108,3 +108,9 @@ ENV/
 # editor
 .vscode/
 .idea/
+
+# Car consumption model
+
+.CarConsumptionModel/models/
+.CarConsumptionModel/src/wandb/
+.CarConsumptionModel/src/CarConsumptionModel.egg-info/

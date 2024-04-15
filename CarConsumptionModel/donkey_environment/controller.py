@@ -19,3 +19,4 @@ class DonkeyController(DonkeyUnitySimContoller):
         self.handler = DonkeyHandler(conf=conf)
 
         self.client = SimClient(self.address, self.handler)
+        
