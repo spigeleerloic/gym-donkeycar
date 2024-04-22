@@ -5,8 +5,9 @@ import wandb
 import numpy as np
 import torch 
 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC, TD3, DDPG, A2C, DQN
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.ddpg.policies import CnnPolicy
 
 import sys
 
@@ -14,6 +15,7 @@ sys.path.insert(0, r"c:\Users\spige\memoire\gym-donkeycar-retry\gym-donkeycar\Ca
 
 from utils.environment import change_env_space, change_model_action_space
 from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
+from agent.EpsilonGreedyDDPG import EpsilonGreedyDDPG
 
 script_dir = os.path.dirname(__file__)
 #default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
@@ -73,8 +75,10 @@ try:
         print(f"path exists: {model_path}")
         # Load your model here
 
-        ppo_agent = PPO.load(model_path)
-        ppo_agent = change_model_action_space(ppo_agent)
+        policy = CnnPolicy.load(model_path)
+
+        ppo_agent = DDPG(policy, env, verbose=1, buffer_size=20_000)
+        #ppo_agent = change_model_action_space(ppo_agent)
 
         #model = ppo_agent.policy.to("cpu")
 

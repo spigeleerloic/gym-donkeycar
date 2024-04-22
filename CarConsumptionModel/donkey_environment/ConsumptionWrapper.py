@@ -111,5 +111,6 @@ class ConsumptionWrapper(DonkeyEnv):
 
         # wait until the car is loaded in the scene
         self.viewer.wait_until_loaded()
+    
 
         

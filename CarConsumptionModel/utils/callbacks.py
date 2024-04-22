@@ -1,7 +1,13 @@
 from tqdm.rich import tqdm
+from typing import Dict, Any
 from stable_baselines3.common.callbacks import BaseCallback, ProgressBarCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 from wandb.integration.sb3 import WandbCallback
 import wandb
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CustomProgressBarCallback(ProgressBarCallback):
     """
@@ -37,8 +43,11 @@ class CustomProgressBarCallback(ProgressBarCallback):
 
 class CustomWandbCallback(WandbCallback):
         
-    def __init__(self, **kwargs) -> None:
+    def __init__(self,config, name,  **kwargs) -> None:
         super().__init__(**kwargs)
+
+        self.config = config
+        self.name = name
 
         self.total_episode_reward = 0
         self.episode_length = 0
@@ -74,6 +83,7 @@ class CustomWandbCallback(WandbCallback):
             self.episode_count += 1
 
         return True
+
     
 class UnityInteractionCallback(BaseCallback):
 
@@ -82,14 +92,145 @@ class UnityInteractionCallback(BaseCallback):
         self.env = env
         self.pause_message = {"msg_type": "pause"}
         self.resume_message = {"msg_type": "resume"}
+        self.vectorized = False
+        # if env is vectorized
+        if hasattr(self.env, "envs"):
+            self.vectorized = True
+    
+    def send_message(self, vectorized=False, message=None):
+        if vectorized:
+            for env in self.env.envs:
+                env.viewer.handler.blocking_send(message)
+        else:
+            self.env.viewer.handler.blocking_send(message)
     
     def _on_step(self) -> bool:
         return super()._on_step()
 
-
     def on_rollout_start(self) -> None:
-        self.env.viewer.handler.blocking_send(self.resume_message)
-
+        self.send_message(self.vectorized, self.resume_message)
     
     def on_rollout_end(self) -> None: 
-        self.env.viewer.handler.blocking_send(self.pause_message)
+        self.send_message(self.vectorized, self.pause_message)
+
+class LogCallback(BaseCallback):
+
+    def __init__(self, log_path="../logs/training.log", **kwargs) -> None:
+        super().__init__(**kwargs)
+
+        self.log_path = log_path
+        # set logger to some destination files
+        logger.setLevel(logging.INFO)
+        file_handler = logging.FileHandler(self.log_path, mode="w")
+        logger.addHandler(file_handler)
+        
+        self.episode_count = 0
+        logger.info(f"Episode number : {self.episode_count}\n")
+
+    def _on_step(self) -> bool:
+        # log the rewards
+        logger.info(
+            f"""
+            Reward: {self.locals['rewards'][0]}
+            forward velocity : {self.locals['infos'][0]['forward_vel']} 
+            \t distance to middle line : {self.locals['infos'][0]['distance_to_middle_line']} 
+            \t objective distance : {self.locals['infos'][0]['objective_distance']} 
+            \t vsp : {self.locals['infos'][0]['vsp']} 
+            \t done : {self.locals['dones'][0]}\n"""
+        )
+
+        if self.locals['dones'][0]:
+            self.episode_count += 1
+            logger.info(f"Episode number : {self.episode_count}\n")
+        
+        return True
+    
+class CheckpointWithUnityInteractionCallback(CheckpointCallback):
+
+    def __init__(self, env, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.env = env
+        self.pause_message = {"msg_type": "pause"}
+        self.resume_message = {"msg_type": "resume"}
+        self.vectorized = False
+        # if env is vectorized
+        if hasattr(self.env, "envs"):
+            self.vectorized = True
+
+    def send_message(self, vectorized=False, message=None):
+        if vectorized:
+            for env in self.env.envs:
+                env.viewer.handler.blocking_send(message)
+        else:
+            self.env.viewer.handler.blocking_send(message)
+
+    def _on_step(self) -> bool:
+        if self.n_calls % self.save_freq == 0:
+            self.send_message(self.vectorized, self.pause_message)
+            model_path = self._checkpoint_path(extension="zip")
+            print(self.model)
+            print(type(self.model))
+            print(dir(self.model))
+
+            # save current policy
+            self.model.policy.save(model_path)
+            if self.verbose >= 2:
+                print(f"Saving model checkpoint to {model_path}")
+
+            if self.save_replay_buffer and hasattr(self.model, "replay_buffer") and self.model.replay_buffer is not None:
+                # If model has a replay buffer, save it too
+                replay_buffer_path = self._checkpoint_path("replay_buffer_", extension="pkl")
+                self.model.save_replay_buffer(replay_buffer_path)
+                if self.verbose > 1:
+                    print(f"Saving model replay buffer checkpoint to {replay_buffer_path}")
+
+            if self.save_vecnormalize and self.model.get_vec_normalize_env() is not None:
+                # Save the VecNormalize statistics
+                vec_normalize_path = self._checkpoint_path("vecnormalize_", extension="pkl")
+                self.model.get_vec_normalize_env().save(vec_normalize_path)
+                if self.verbose >= 2:
+                    print(f"Saving model VecNormalize to {vec_normalize_path}")
+            self.send_message(self.vectorized, self.resume_message)
+        return True
+        
+
+
+def retrieve_callbacks(env, name: str, config : Dict ) -> CallbackList:
+    """
+    Create a list of callbacks to be used during training
+    The list of callbacks includes:
+    - CheckpointWithUnityInteractionCallback             -> Save model and replay buffer
+    - CustomProgressBarCallback                          -> Display progress bar
+    - CustomWandbCallback                                -> Log metrics to wandb
+    - UnityInteractionCallback                           -> Pause and resume Unity environment
+    - LogCallback                                        -> Log training metrics to a file
+
+    returns:
+        callback : CallbackList 
+    A list of callbacks to be used during training
+    """
+    checkpoint_callback = CheckpointWithUnityInteractionCallback(
+        env=env,
+        save_freq=100,
+        save_path=f"../models/{name}",
+        name_prefix=f"checkpoint",
+        save_replay_buffer=True,
+        save_vecnormalize=True,
+    )
+
+    wandbcallback = CustomWandbCallback(name=name, config=config, gradient_save_freq=100, verbose=2)
+    unityInteractionCallback = UnityInteractionCallback(env=env)
+    custom_progress_bar_callback = CustomProgressBarCallback()
+
+    logCallback = LogCallback(log_path=f"../models/{name}/training.log")
+    callback = CallbackList(
+        [
+            checkpoint_callback, 
+            custom_progress_bar_callback, 
+            wandbcallback, 
+            unityInteractionCallback,
+            logCallback
+        ]
+    )
+
+    return callback

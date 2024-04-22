@@ -15,7 +15,7 @@
         "kp" : 2.0,
         "ki" : 1e-3,
         "kd" : 10.0,
-        "min_output" : -5.0,
-        "max_output" : 5.0
+        "min_output" : -1.0,
+        "max_output" : 1.0
     }
 }

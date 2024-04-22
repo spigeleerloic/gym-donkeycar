@@ -6,7 +6,7 @@ import os
 import numpy as np
 import math
 
-from donkey_environment.rewards import positive_centering, positive_centering_consumption, negative_centering, negative_centering_consumption, positive_centering_distance
+import donkey_environment.rewards as rewards
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +63,12 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.raycast = []
         self.cumulative_consumption = 0.0
         self.objective_reached = False
-        self.reward_function = "positive_centering"
 
 
     def reset(self) -> None:
         super().reset()
         self.objective_reached = False
+        self.cumulative_consumption = 0.0
 
     def determine_episode_over(self):
 
@@ -121,8 +121,8 @@ class DonkeyHandler(DonkeyUnitySimHandler):
     def observe(self) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
         observation, reward, done, info = super().observe()
         # add new information
-        info["distance_to_middle_line"] = self.distance_to_middle_line
         #info["raycast"] = self.raycast
+        info["distance_to_middle_line"] = self.distance_to_middle_line
         info["objective_reached"] = self.objective_reached
         info["vsp"] = self.vsp
         info["next_marker"] = self.next_marker
@@ -138,34 +138,7 @@ class DonkeyHandler(DonkeyUnitySimHandler):
     def send_resume(self) -> None:
         msg = {"msg_type": "resume"}
         self.blocking_send(msg)
-    
-    def compute_distance_to_objective(self) -> float:
-        """
-        Compute the distance to the objective and normalize it.
-        updates the distance towards the markers and the objective along with the current marker.
-        
-        Returns:
-            float: normalized distance to the objective
-        """
-        position = np.array([self.x, self.y, self.z])        
-        distance_to_next_marker = np.linalg.norm(position - self.markers[self.next_marker])
 
-        self.distance_to_next_marker = distance_to_next_marker
-        self.distance_towards_objective = distance_to_next_marker + self.cumulated_distance_objective[self.next_marker]
-        
-        threshold = 1.0
-        if distance_to_next_marker < threshold:
-            self.next_marker = (self.next_marker + 1) % len(self.markers)
-                
-        normalized_distance = self.distance_towards_objective / self.maximal_distance
-        # ensure 0 <= normalized_distance <= 1
-        if normalized_distance > 1.0:
-            normalized_distance = 1.0
-        return normalized_distance
-
-    def calc_reward(self, done: bool) -> float:
-
-        return positive_centering(self, done)
 
     
     
