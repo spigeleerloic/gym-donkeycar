@@ -9,7 +9,7 @@ import datetime
 import torch
 
 from stable_baselines3 import PPO, SAC, TD3, DDPG, A2C, DQN
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecFrameStack
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "--load_model_name", 
         help="Path to the model to load", 
         type=str, dest="model_name", 
-        default="pretrained_PPO_1"
+        default="PPO"
     )
 
     args = parser.parse_args()
@@ -64,9 +64,9 @@ if __name__ == "__main__":
     model_directory = "../models/"
 
     current_datetime = datetime.datetime.now()
-    current_reward = rewards.hybrid_centering_velocity
+    current_reward = rewards.negative_centering
 
-    name = f"{current_reward.__name__}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
+    name = f"{current_reward.__name__}_{args.model_name}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
 
     #env = gym.make("donkey-steep-ascent-track-v0")
     #env = ConsumptionWrapper(level=args.environment)
@@ -85,16 +85,14 @@ if __name__ == "__main__":
     for env in env.unwrapped.envs:
         env.set_reward_fn(current_reward)
 
-    model_type = "PPO"
-
-    config = open(f"../hyperparams/{model_type}.json", "r").read()
+    config = open(f"../hyperparams/{args.model_name}.json", "r").read()
     config = json.loads(config)[current_reward.__name__]
     print(config)
 
     try:
-        algo = getattr(sb3, model_type)
+        algo = getattr(sb3, args.model_name)
     except Exception as e:
-        algo = getattr(sb3_contrib, model_type)
+        algo = getattr(sb3_contrib, args.model_name)
 
 
     run = wandb.init(
@@ -109,7 +107,7 @@ if __name__ == "__main__":
     callback = retrieve_callbacks(env, name, config)
 
     # TODO : add wrapper for car that does not move at all for a number of steps (can't move uphill or does not move at all)
-    pretrained_model = algo.load(f"../models/{args.model_name}.zip", 
+    pretrained_model = algo.load(f"../models/pretrained_{args.model_name}_1.zip", 
         env=env,
         verbose=1, 
         **config

@@ -3,14 +3,27 @@ import math
 
 logger = logging.getLogger(__name__)
 
-COLLISION_REWARD = -1000.0
-COEF_COLLISION_REWARD = 10000.0
-DONE_REWARD = 0.0
+COLLISION_REWARD = -500.0
+COEF_COLLISION_REWARD = 1000.0
+DONE_REWARD = 100.0
 CHECKPOINT_REWARD = 0.0
 AVOID_COLLISION_REWARD = 0.0
 CENTERING_COEF_REWARD = - 1.0
 
+def sparse_reward(self, done: bool) -> float:
+        
+    logger.debug(f"calc_reward : {self.hit} \t {done} \t {self.objective_distance}")
+    if self.hit != "none":
+        logger.debug(f"collision reward: {COLLISION_REWARD}")
+        return COLLISION_REWARD
+    
+    elif done:
+        logger.debug(f"done reward: {DONE_REWARD}")
+        return DONE_REWARD
 
+    reward = 0.0
+    logger.debug(f"reward: {reward}")
+    return reward    
 
 def positive_centering(self, done: bool) -> float:
 

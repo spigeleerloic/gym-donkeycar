@@ -7,7 +7,7 @@ import torch
 
 from stable_baselines3 import PPO, SAC, TD3, DDPG, A2C, DQN
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.ddpg.policies import CnnPolicy
+from stable_baselines3.ddpg.policies import CnnPolicy, MlpPolicy
 
 import sys
 

@@ -63,12 +63,14 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.raycast = []
         self.cumulative_consumption = 0.0
         self.objective_reached = False
-
+        self.has_reached_checkpoint = False
+        self.next_marker = 1.0
 
     def reset(self) -> None:
         super().reset()
         self.objective_reached = False
         self.cumulative_consumption = 0.0
+        self.has_reached_checkpoint = False
 
     def determine_episode_over(self):
 
@@ -113,7 +115,12 @@ class DonkeyHandler(DonkeyUnitySimHandler):
             self.objective_reached = True
 
         if "next_marker" in message:
+            current_marker = self.next_marker
             self.next_marker = float(message["next_marker"])
+            self.has_reached_checkpoint = False
+            if current_marker != self.next_marker:
+                self.has_reached_checkpoint = True
+            
 
         super().on_telemetry(message)
 

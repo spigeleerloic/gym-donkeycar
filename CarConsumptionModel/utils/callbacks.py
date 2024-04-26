@@ -5,6 +5,8 @@ from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 from wandb.integration.sb3 import WandbCallback
 import wandb
 
+import torch
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -168,14 +170,16 @@ class CheckpointWithUnityInteractionCallback(CheckpointCallback):
         if self.n_calls % self.save_freq == 0:
             self.send_message(self.vectorized, self.pause_message)
             model_path = self._checkpoint_path(extension="zip")
-            print(self.model)
-            print(type(self.model))
-            print(dir(self.model))
 
             # save current policy
             self.model.policy.save(model_path)
             if self.verbose >= 2:
                 print(f"Saving model checkpoint to {model_path}")
+
+            policy_path = self._checkpoint_path("policy_", extension="pth")
+            torch.save(self.model.policy.state_dict(), policy_path)
+            if self.verbose >= 2:
+                print(f"Saving policy model to {policy_path}")
 
             if self.save_replay_buffer and hasattr(self.model, "replay_buffer") and self.model.replay_buffer is not None:
                 # If model has a replay buffer, save it too
@@ -195,7 +199,7 @@ class CheckpointWithUnityInteractionCallback(CheckpointCallback):
         
 
 
-def retrieve_callbacks(env, name: str, config : Dict ) -> CallbackList:
+def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_000) -> CallbackList:
     """
     Create a list of callbacks to be used during training
     The list of callbacks includes:
@@ -211,7 +215,7 @@ def retrieve_callbacks(env, name: str, config : Dict ) -> CallbackList:
     """
     checkpoint_callback = CheckpointWithUnityInteractionCallback(
         env=env,
-        save_freq=100,
+        save_freq=save_frequency,
         save_path=f"../models/{name}",
         name_prefix=f"checkpoint",
         save_replay_buffer=True,

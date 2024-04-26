@@ -33,6 +33,7 @@ from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 import donkey_environment.rewards as rewards
 from agent.CustomPPO import CustomPPO
 from agent.EpsilonGreedyDDPG import EpsilonGreedyDDPG
+from agent.EpsilonGreedySAC import EpsilonGreedySAC
 from regulation.PIDController import PIDController
 
 # class EpsilonGreedyPolicy(PolicyWrapper):
@@ -172,7 +173,7 @@ if __name__ == "__main__":
         max_output = steering_parameters["max_output"],
     )
 
-    model = EpsilonGreedyDDPG(
+    model = EpsilonGreedySAC(
         pretrained_model,
         speed_controller,
         steering_controller,
@@ -184,10 +185,10 @@ if __name__ == "__main__":
         verbose=1,
         buffer_size=20_000,
         learning_starts=0,
-        train_freq=(10000, "step"),
+        train_freq=(1, "episode"),
     )
 
-    callback = retrieve_callbacks(env, name, config=None)
+    callback = retrieve_callbacks(env, name, config=None, save_frequency=10)
 
     env.reset()
     model.learn(total_timesteps=10*100_000, callback=callback)
