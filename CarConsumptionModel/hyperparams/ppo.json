@@ -10,7 +10,11 @@
         "vf_coef": 0.5,
         "max_grad_norm": 0.5,
         "seed": 42,
-        "batch_size": 64
+        "batch_size": 64,
+        "policy_kwargs": {
+            "net_arch": [256, 256]
+        },
+        "use_sde": true
     },
 
     "hybrid_centering_velocity": {

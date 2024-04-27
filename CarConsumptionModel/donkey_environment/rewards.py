@@ -10,6 +10,8 @@ CHECKPOINT_REWARD = 0.0
 AVOID_COLLISION_REWARD = 0.0
 CENTERING_COEF_REWARD = - 1.0
 
+
+
 def sparse_reward(self, done: bool) -> float:
         
     logger.debug(f"calc_reward : {self.hit} \t {done} \t {self.objective_distance}")
@@ -89,7 +91,7 @@ def negative_centering(self, done: bool) -> float:
 
     centering_reward_term = math.fabs(self.distance_to_middle_line)
     reward =  - centering_reward_term - forward_velocity_term
-
+    
     logger.debug(f"reward: {reward}")
     return reward
 

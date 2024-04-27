@@ -94,7 +94,6 @@ if __name__ == "__main__":
         save_code=True,
     )
     callback = retrieve_callbacks(env=env, name=name, config=config)
-
     model = algo("CnnPolicy", env, verbose=1, **config)
     model.learn(total_timesteps=100_000, callback=callback)
     model.save(f"../models/{name}")
