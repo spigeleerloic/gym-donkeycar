@@ -10,6 +10,25 @@ CHECKPOINT_REWARD = 0.0
 AVOID_COLLISION_REWARD = 0.0
 CENTERING_COEF_REWARD = - 1.0
 
+def distance_based_reward(self, done: bool) -> float:
+            
+    logger.debug(f"calc_reward : {self.hit} \t {done} \t {self.objective_distance}")
+    if self.hit != "none":
+        logger.debug(f"collision reward: {COLLISION_REWARD}")
+        return COLLISION_REWARD
+    
+    elif done:
+        logger.debug(f"done reward: {DONE_REWARD}")
+        return 1.0
+
+    objective_distance_term = 1.0 - self.objective_distance
+    distance_from_center_term = 1.0 - math.fabs(self.distance_to_middle_line)
+    weights = [0.5, 0.5]
+
+    reward = weights[0] * objective_distance_term + weights[1] * distance_from_center_term
+    logger.debug(f"reward: {reward}")
+    return reward
+
 def area_reward(self, done: bool) -> float:
         
     logger.debug(f"calc_reward : {self.hit} \t {done} \t {self.objective_distance}")

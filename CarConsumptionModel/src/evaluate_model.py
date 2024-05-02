@@ -61,7 +61,8 @@ model_directory = "..\models"
 
 model_path = os.path.join(model_directory, args.model_name)
 try:
-    re = re.compile("checkpoint_\d+_steps.zip")
+    #re = re.compile("checkpoint_\d+_steps.zip")
+    re = re.compile("checkpoint_policy_\d+_steps.pth")
     for file in os.listdir(model_path):
         # if "checkpoint_%d_steps.zip" in file then load the model
         # use regex to match the pattern
@@ -75,52 +76,50 @@ try:
             # ppo_agent = SAC("CnnPolicy", env, verbose=1)
             # ppo_agent.policy = policy
 
-            # model = EpsilonGreedySAC.load(
-            #     path_to_model, 
-            #     env, 
-            #     expert_policy=None,
-            #     speed_controller=None,
-            #     steering_controller=None,
-            #     target_speed=None,
-            #     target_steering=None,
-            #     epsilon=0.1
-            # )
+            # load saved model from zip file
+            try:
+                model = EpsilonGreedySAC(
 
-            policy = sac_policies.SACPolicy.load(path_to_model)
-            model = EpsilonGreedySAC(
-                expert_policy=None, 
-                speed_controller=None,
-                steering_controller=None,
-                target_speed=None,
-                target_steering=None,
-                epsilon=0.1,
-                env=env,
-                policy="CnnPolicy",
-                buffer_size=20_000
-            )
-            model.policy = policy
-            #model = ppo_agent.policy.to("cpu")
-            for i in range(args.n_runs):
-                obs = env.reset()
-                rewards = []
-                done = False
+                    expert_policy = None,
+                    speed_controller = None, 
+                    steering_controller = None, 
+                    target_speed = None, 
+                    target_steering = None,
+                    epsilon = None,
 
-                while not done:
-                    action, _ = model.predict(obs, deterministic=True)
-                    # show what the neural network is predicting
-                    # neural_obs = torch.tensor(obs).permute(2, 0, 1).unsqueeze(0).float()
-                    # neural_action = model(neural_obs)
-                    # print(f"neural action : {neural_action}")
+                    policy = "CnnPolicy",
+                    env = env,
+                    verbose=1,
+                    buffer_size=20_000,
+                )
+                # load policy from pth file
+                model.policy.load_state_dict(torch.load(path_to_model))
+                # policy = torch.load(path_to_model)
+                # model.policy = policy
+                for i in range(args.n_runs):
+                    obs = env.reset()
+                    rewards = []
+                    done = False
 
-                    obs, reward, done, info = env.step(action)
-                    print(f"action : {action}") 
-                    print(f"forward velocity : {info['forward_vel']}")
-                    print(f"distance to middle line : {info['distance_to_middle_line']}")
+                    while not done:
+                        action, _ = model.predict(obs, deterministic=True)
+                        # show what the neural network is predicting
+                        # neural_obs = torch.tensor(obs).permute(2, 0, 1).unsqueeze(0).float()
+                        # neural_action = model(neural_obs)
+                        # print(f"neural action : {neural_action}")
 
-                    rewards.append(reward)
-                print(f"Total steps: {len(rewards)}")
-                print(f"Total reward: {sum(rewards)}")
-                print(f"rewards : {rewards}")
+                        obs, reward, done, info = env.step(action)
+                        print(f"action : {action}") 
+                        print(f"forward velocity : {info['forward_vel']}")
+                        print(f"distance to middle line : {info['distance_to_middle_line']}")
+
+                        rewards.append(reward)
+                    print(f"Total steps: {len(rewards)}")
+                    print(f"Total reward: {sum(rewards)}")
+                    print(f"rewards : {rewards}")
+            except Exception as e:
+                print(f"Error loading model: {e}")
+                continue
 except PermissionError as e:
     print("Permission denied error:", e)
 

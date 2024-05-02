@@ -6,16 +6,7 @@ import os
 import numpy as np
 import math
 
-import donkey_environment.rewards as rewards
-
 logger = logging.getLogger(__name__)
-
-COLLISION_REWARD = -1000.0
-COEF_COLLISION_REWARD = 10000.0
-DONE_REWARD = 0.0
-CHECKPOINT_REWARD = 0.0
-AVOID_COLLISION_REWARD = 0.0
-CENTERING_COEF_REWARD = - 1.0
 
 # Math helpers added by CireNeikual (222464)
 def euler_to_quat(e):
@@ -65,12 +56,20 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.objective_reached = False
         self.has_reached_checkpoint = False
         self.next_marker = 1.0
+        self.destination_marker = None
 
     def reset(self) -> None:
         super().reset()
         self.objective_reached = False
         self.cumulative_consumption = 0.0
         self.has_reached_checkpoint = False
+
+    
+    def on_car_loaded(self, message: Dict[str, Any]) -> None:
+        super().on_car_loaded(message)
+
+        if "destination_marker" in message:
+            self.destination_marker = int(message["destination_marker"])
 
     def determine_episode_over(self):
 
@@ -135,6 +134,7 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         info["next_marker"] = self.next_marker
         info["cumulative_consumption"] = self.cumulative_consumption
         info["objective_distance"] = self.objective_distance
+        info["destination_marker"] = self.destination_marker
 
         return observation, reward, done, info
     
