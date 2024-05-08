@@ -199,7 +199,7 @@ class CheckpointWithUnityInteractionCallback(CheckpointCallback):
         
 
 
-def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_000) -> CallbackList:
+def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_000, use_wandb : bool = True) -> CallbackList:
     """
     Create a list of callbacks to be used during training
     The list of callbacks includes:
@@ -221,20 +221,21 @@ def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_
         save_replay_buffer=True,
         save_vecnormalize=True,
     )
-
-    wandbcallback = CustomWandbCallback(name=name, config=config, gradient_save_freq=100, verbose=2)
+    
     unityInteractionCallback = UnityInteractionCallback(env=env)
     custom_progress_bar_callback = CustomProgressBarCallback()
 
     logCallback = LogCallback(log_path=f"../models/{name}/training.log")
+    list_of_callbacks = [checkpoint_callback, unityInteractionCallback, custom_progress_bar_callback, logCallback]
+
+    print(f"use wandb : {use_wandb}")
+    if use_wandb:
+        wandbcallback = CustomWandbCallback(name=name, config=config, gradient_save_freq=100, verbose=2)
+        list_of_callbacks.append(wandbcallback)
+    
     callback = CallbackList(
-        [
-            checkpoint_callback, 
-            custom_progress_bar_callback, 
-            wandbcallback, 
-            unityInteractionCallback,
-            logCallback
-        ]
+        list_of_callbacks
     )
+    
 
     return callback

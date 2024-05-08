@@ -20,23 +20,11 @@ import sys
 class EpsilonGreedySAC(SAC):
 
     def __init__(self, 
-        expert_policy, 
-        speed_controller : PIDController, 
-        steering_controller : PIDController, 
-        target_speed : float = 1.0, 
-        target_steering : float = 0.0,
         epsilon : float = 0.1, 
         **kwargs
     ):
         super(EpsilonGreedySAC, self).__init__(**kwargs)
-
-        self.expert_policy = expert_policy
         self.epsilon = epsilon
-
-        self.speed_controller = speed_controller
-        self.steering_controller = steering_controller
-        self.target_speed = target_speed
-        self.target_steering = target_steering
 
         # n_envs = 1
         self.last_infos = [{"forward_vel": 0.0, "distance_to_middle_line": 0.0}]
@@ -58,18 +46,11 @@ class EpsilonGreedySAC(SAC):
             # We use non-deterministic action in the case of SAC, for TD3, it does not matter
             if np.random.rand() < (1.0 - self.epsilon):
                 # get infos from all envs
-                unscaled_action = np.zeros((n_envs, self.action_space.shape[0]))
-                for idx, info_dict in enumerate(self.last_infos):
-                    
-                    throttle = self.speed_controller.update(self.target_speed, info_dict["forward_vel"])
-                    steering = self.steering_controller.update(self.target_steering, info_dict["distance_to_middle_line"])
+                unscaled_action, _ = self.predict(self._last_obs, deterministic=True)
 
-                    unscaled_action[idx] = np.array([steering, throttle])
-                print("Expert : unscaled_action: ", unscaled_action)
-                #unscaled_action = self.expert_policy.predict(self._last_obs, deterministic=True)[0]
             else:
-                unscaled_action = np.array([self.action_space.sample() for _ in range(n_envs)])
-                print("Random : unscaled_action: ", unscaled_action)
+                #unscaled_action = np.array([self.action_space.sample() for _ in range(n_envs)])
+                unscaled_action, _ = self.predict(self._last_obs, deterministic=False)
         # Rescale the action from [low, high] to [-1, 1]
         if isinstance(self.action_space, spaces.Box):
             scaled_action = self.policy.scale_action(unscaled_action)

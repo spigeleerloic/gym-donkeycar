@@ -31,15 +31,7 @@ import donkey_environment.rewards as rewards
 from agent.CustomPPO import CustomPPO
 
 if __name__ == "__main__":
-    
-    script_dir = os.path.dirname(__file__)
-    #default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
-    default_path = os.path.join(script_dir, '../../../../pid_controller_simulator/donkey_sim.exe')
-    if not os.path.exists(default_path):
-        raise ValueError(f"Default path '{default_path}' does not exist or is inaccessible.")
-    else:
-        print(f"Using default simulator path: {default_path}")
-
+        
     parser = argparse.ArgumentParser(description='RL algorithm with consumption model applied to donkey car')
 
     parser.add_argument(
@@ -53,7 +45,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     current_datetime = datetime.datetime.now()
-    current_reward = rewards.negative_centering
+    current_reward = rewards.distance_based_reward
     name = f"{current_reward.__name__}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
 
   
@@ -87,7 +79,7 @@ if __name__ == "__main__":
 
     run = wandb.init(
         # Set the project where this run will be logged
-        project="donkey_car",
+        project="donkey_training",
         config=config,
         name=name,
         sync_tensorboard=True,
@@ -95,7 +87,7 @@ if __name__ == "__main__":
     )
     callback = retrieve_callbacks(env=env, name=name, config=config)
     model = algo("CnnPolicy", env, verbose=1, **config)
-    model.learn(total_timesteps=100_000, callback=callback)
+    model.learn(total_timesteps=10*100_000, callback=callback)
     model.save(f"../models/{name}")
 
     run.finish()

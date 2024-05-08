@@ -11,74 +11,24 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
 from stable_baselines3.common.utils import obs_as_tensor
 
-from stable_baselines3 import PPO
+from stable_baselines3 import A2C
 
 from gym import spaces
 
 
 random.seed(42)
-SelfEpsilonGreedyPPO = TypeVar("SelfEpsilonGreedyPPO", bound="EpsilonGreedyPPO")
+SelfEpsilonGreedyA2C = TypeVar("SelfEpsilonGreedyA2C", bound="EpsilonGreedyA2C")
+
+class EpsilonGreedyA2C(A2C):
+
+    def __init__(self, 
+        epsilon : float = 0.1, 
+        **kwargs
+    ):
+        super(EpsilonGreedyA2C, self).__init__(**kwargs)
+        self.epsilon = epsilon
 
 
-class EpsilonGreedyPPO(PPO):
-
-    def __init__(
-        self, 
-        policy: str | type[ActorCriticPolicy], 
-        env: Env | VecEnv | str, 
-        learning_rate: float | Callable[[float], float] = 0.0003, 
-        n_steps: int = 2048, 
-        batch_size: int = 64,
-        n_epochs: int = 10, 
-        gamma: float = 0.99, 
-        gae_lambda: float = 0.95, 
-        clip_range: float | Callable[[float], float] = 0.2, 
-        clip_range_vf: None | float | Callable[[float], float] = None, 
-        normalize_advantage: bool = True, 
-        ent_coef: float = 0, 
-        vf_coef: float = 0.5, 
-        max_grad_norm: float = 0.5,     
-        use_sde: bool = False, 
-        sde_sample_freq: int = -1, 
-        target_kl: float | None = None, 
-        stats_window_size: int = 100, 
-        tensorboard_log: str | None = None, 
-        policy_kwargs: Dict[str, Any] | None = None, 
-        verbose: int = 0, seed: int | None = None, 
-        device: th.device | str = "auto", 
-        _init_setup_model: bool = True,
-        epsilon_schedule: Schedule = lambda x: 0.1,
-        ):
-        super().__init__(
-            policy=policy, 
-            env=env, 
-            learning_rate=learning_rate, 
-            n_steps=n_steps, 
-            batch_size=batch_size, 
-            n_epochs=n_epochs, 
-            gamma=gamma,
-            gae_lambda=gae_lambda, 
-            clip_range=clip_range, 
-            clip_range_vf=clip_range_vf, 
-            normalize_advantage=normalize_advantage, 
-            ent_coef=ent_coef, 
-            vf_coef=vf_coef, 
-            max_grad_norm=max_grad_norm, 
-            use_sde=use_sde, 
-            sde_sample_freq=sde_sample_freq, 
-            target_kl=target_kl, 
-            stats_window_size=stats_window_size, 
-            tensorboard_log=tensorboard_log, 
-            policy_kwargs=policy_kwargs, 
-            verbose=verbose, 
-            seed=seed, 
-            device=device, 
-            _init_setup_model=_init_setup_model
-        )
-        
-        self.epsilon_schedule = epsilon_schedule
-        self.epsilon = self.epsilon_schedule(0)
-    
     def collect_rollouts(
         self,
         env: VecEnv,
