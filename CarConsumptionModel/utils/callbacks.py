@@ -117,7 +117,7 @@ class UnityInteractionCallback(BaseCallback):
 
 class LogCallback(BaseCallback):
 
-    def __init__(self, log_path="../logs/training.log", **kwargs) -> None:
+    def __init__(self, log_path="../logs/training.csv", **kwargs) -> None:
         super().__init__(**kwargs)
 
         self.log_path = log_path
@@ -127,24 +127,35 @@ class LogCallback(BaseCallback):
         logger.addHandler(file_handler)
         
         self.episode_count = 0
-        logger.info(f"Episode number : {self.episode_count}\n")
+        self.steps = 1
+        #logger.info(f"Episode number : {self.episode_count}\n")
+        logger.info("reward,forward_velocity,distance_to_middle_line,objective_distance,done,checkpoint,collision,episode_count,step")
 
     def _on_step(self) -> bool:
         # log the rewards
-        logger.info(
-            f"""
-            Reward: {self.locals['rewards'][0]}
-            forward velocity : {self.locals['infos'][0]['forward_vel']} 
-            \t distance to middle line : {self.locals['infos'][0]['distance_to_middle_line']} 
-            \t objective distance : {self.locals['infos'][0]['objective_distance']} 
-            \t vsp : {self.locals['infos'][0]['vsp']} 
-            \t done : {self.locals['dones'][0]}\n"""
-        )
+        # logger.info(
+        #     f"""
+        #     Reward: {self.locals['rewards'][0]}
+        #     forward velocity : {self.locals['infos'][0]['forward_vel']} 
+        #     \t distance to middle line : {self.locals['infos'][0]['distance_to_middle_line']} 
+        #     \t objective distance : {self.locals['infos'][0]['objective_distance']} 
+        #     \t vsp : {self.locals['infos'][0]['vsp']} 
+        #     \t done : {self.locals['dones'][0]}\n"""
+        # )
+        reward = self.locals['rewards'][0]
+        info = self.locals['infos'][0]
+        forward_velocity = info['forward_vel']
+        distance_to_middle_line = info['distance_to_middle_line']
+        objective_distance = info['objective_distance']
+        done = self.locals['dones'][0]
+        checkpoint = info['checkpoint']
+        collision = info["collision"]
 
+        logger.info(f"{reward},{forward_velocity},{distance_to_middle_line},{objective_distance},{done},{checkpoint},{collision},{self.episode_count},{self.steps}")
+        
         if self.locals['dones'][0]:
             self.episode_count += 1
-            logger.info(f"Episode number : {self.episode_count}\n")
-        
+        self.steps += 1
         return True
     
 class CheckpointWithUnityInteractionCallback(CheckpointCallback):
@@ -225,7 +236,7 @@ def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_
     unityInteractionCallback = UnityInteractionCallback(env=env)
     custom_progress_bar_callback = CustomProgressBarCallback()
 
-    logCallback = LogCallback(log_path=f"../models/{name}/training.log")
+    logCallback = LogCallback(log_path=f"../models/{name}/training.csv")
     list_of_callbacks = [checkpoint_callback, unityInteractionCallback, custom_progress_bar_callback, logCallback]
 
     print(f"use wandb : {use_wandb}")
