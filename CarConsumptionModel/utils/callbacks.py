@@ -1,12 +1,16 @@
 from tqdm.rich import tqdm
 from typing import Dict, Any
 from stable_baselines3.common.callbacks import BaseCallback, ProgressBarCallback
-from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList, EvalCallback
+
+from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, sync_envs_normalization
+from stable_baselines3.common.evaluation import evaluate_policy
+
 from wandb.integration.sb3 import WandbCallback
 import wandb
 
 import torch
-
+import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
@@ -196,7 +200,8 @@ class CheckpointWithUnityInteractionCallback(CheckpointCallback):
                     print(f"Saving model VecNormalize to {vec_normalize_path}")
             self.send_message(self.vectorized, self.resume_message)
         return True
-        
+    
+
 
 
 def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_000, use_wandb : bool = True) -> CallbackList:
@@ -226,7 +231,24 @@ def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_
     custom_progress_bar_callback = CustomProgressBarCallback()
 
     logCallback = LogCallback(log_path=f"../models/{name}/training.log")
-    list_of_callbacks = [checkpoint_callback, unityInteractionCallback, custom_progress_bar_callback, logCallback]
+    
+    evalCallback = EvalCallback(
+        env,
+        best_model_save_path=f"../eval/{name}/",
+        log_path=f"../eval/{name}/",
+        eval_freq=10_000,
+        deterministic=True,
+        render=False,
+        n_eval_episodes=5,
+    )
+    
+    list_of_callbacks = [
+        checkpoint_callback, 
+        unityInteractionCallback, 
+        custom_progress_bar_callback, 
+        logCallback,
+        evalCallback,
+    ]
 
     print(f"use wandb : {use_wandb}")
     if use_wandb:

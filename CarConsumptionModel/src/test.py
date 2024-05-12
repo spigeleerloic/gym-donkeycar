@@ -75,9 +75,11 @@ try:
         print(f"path exists: {model_path}")
         # Load your model here
 
-        policy = CnnPolicy.load(model_path)
+        # policy = CnnPolicy.load(model_path)
 
-        ppo_agent = DDPG(policy, env, verbose=1, buffer_size=20_000)
+        # ppo_agent = DDPG(policy, env, verbose=1, buffer_size=20_000)
+
+        ppo_agent = PPO.load(model_path, env)
         #ppo_agent = change_model_action_space(ppo_agent)
 
         #model = ppo_agent.policy.to("cpu")
