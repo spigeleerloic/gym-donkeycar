@@ -45,7 +45,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     current_datetime = datetime.datetime.now()
-    current_reward = rewards.distance_based_reward
+    current_reward = rewards.distance_based_reward_positive
     name = f"{current_reward.__name__}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
 
   
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         env.set_reward_fn(current_reward)
 
 
-    model_type = "TQC"
+    model_type = "PPO"
     # instantiate a model "PPO" by the name of model
 
     try:
