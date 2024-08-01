@@ -135,6 +135,8 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         info["cumulative_consumption"] = self.cumulative_consumption
         info["objective_distance"] = self.objective_distance
         info["destination_marker"] = self.destination_marker
+        info["checkpoint"] = self.has_reached_checkpoint
+        info["collision"] = self.hit
 
         return observation, reward, done, info
     
