@@ -3,10 +3,10 @@ import math
 
 logger = logging.getLogger(__name__)
 
-COLLISION_REWARD = -1.0
+COLLISION_REWARD = -100.0
 COEF_COLLISION_REWARD = 1000.0
-DONE_REWARD = 500.0
-CHECKPOINT_REWARD = 100.0
+DONE_REWARD = 10.0
+CHECKPOINT_REWARD = 1.0
 AVOID_COLLISION_REWARD = 0.0
 CENTERING_COEF_REWARD = - 1.0
 
@@ -32,7 +32,7 @@ def distance_based_reward(self, done: bool) -> float:
     weights = [0.5, 0.5]
     reward = weights[0] * objective_distance_term + weights[1] * distance_from_center_term
 
-    #reward += (CHECKPOINT_REWARD * self.has_reached_checkpoint)
+    reward += (CHECKPOINT_REWARD * self.has_reached_checkpoint)
     logger.debug(f"reward: {reward}")
     return reward
 

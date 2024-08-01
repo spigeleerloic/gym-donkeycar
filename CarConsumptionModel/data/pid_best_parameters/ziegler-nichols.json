@@ -1,0 +1,20 @@
+{
+    "target_speed": 1.5,
+    "target_distance" : 0.0,
+    
+    "speed_controller": {
+        "kp" : 3.614404149674543,
+        "ki" : 1.959973971048991,
+        "kd" : 0.12249837319056193,
+        "min_output" : -1.0,
+        "max_output" : 1.0
+    },
+    
+    "steering_controller": {
+        "kp" : 0.36144041496745427,
+        "ki" : 13.527649641036987,
+        "kd" : 0.84547810256481171,
+        "min_output" : -1.0,
+        "max_output" : 1.0
+    }
+}

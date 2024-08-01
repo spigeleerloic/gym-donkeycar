@@ -1,6 +1,5 @@
 {
     "target_speed": 1.0,
-
     "target_distance" : 0.0,
     
     "speed_controller": {

@@ -42,17 +42,34 @@ if __name__ == "__main__":
         default="steep-ascent"
     )
 
+    parser.add_argument(
+        "--forward-action-space",
+        help="forward action space",
+        action="store_false",
+        dest='forward_action_space',
+    )
+
     args = parser.parse_args()
 
     current_datetime = datetime.datetime.now()
-    current_reward = rewards.distance_based_reward_positive
+    current_reward = rewards.distance_based_reward
     name = f"{current_reward.__name__}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
 
-  
+    env_kwargs = {
+        "level": args.environment,
+    }
+
+    if args.forward_action_space:
+        conf = {
+            "throttle_min" :  0.0,
+            "throttle_max" : 1.0,
+        }
+        env_kwargs.update({"conf": conf})
+
     env = make_vec_env(
             ConsumptionWrapper, 
             n_envs=1, 
-            env_kwargs={"level": args.environment}, 
+            env_kwargs=env_kwargs, 
             seed=42,
             vec_env_cls=DummyVecEnv,
             monitor_dir=f"../models/{name}",
@@ -77,15 +94,17 @@ if __name__ == "__main__":
         config["train_freq"] = tuple(config["train_freq"])
     print(config)
 
+
+
     run = wandb.init(
         # Set the project where this run will be logged
-        project="donkey_training",
+        project="trash",
         config=config,
         name=name,
         sync_tensorboard=True,
         save_code=True,
     )
-    callback = retrieve_callbacks(env=env, name=name, config=config)
+    callback = retrieve_callbacks(env=env, name=name, config=config, save_frequency=10_000, eval_frequency=1000, use_wandb=True)
     model = algo("CnnPolicy", env, verbose=1, **config)
     model.learn(total_timesteps=10*100_000, callback=callback)
     model.save(f"../models/{name}")

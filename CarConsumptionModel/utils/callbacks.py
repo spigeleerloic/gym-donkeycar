@@ -204,7 +204,14 @@ class CheckpointWithUnityInteractionCallback(CheckpointCallback):
 
 
 
-def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_000, use_wandb : bool = True) -> CallbackList:
+def retrieve_callbacks(
+    env,
+    name: str,
+    config : Dict,
+    save_frequency : int = 10_000,
+    eval_frequency : int = 10_000,
+    use_wandb : bool = True) -> CallbackList:
+    
     """
     Create a list of callbacks to be used during training
     The list of callbacks includes:
@@ -236,7 +243,7 @@ def retrieve_callbacks(env, name: str, config : Dict, save_frequency : int = 10_
         env,
         best_model_save_path=f"../eval/{name}/",
         log_path=f"../eval/{name}/",
-        eval_freq=10_000,
+        eval_freq=eval_frequency,
         deterministic=True,
         render=False,
         n_eval_episodes=5,
