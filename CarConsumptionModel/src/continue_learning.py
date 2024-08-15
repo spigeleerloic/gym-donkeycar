@@ -44,7 +44,7 @@ if __name__ == "__main__":
         "--load_model_name", 
         help="Path to the model to load", 
         type=str, dest="model_name", 
-        default="EpsilonGreedyPPO"
+        default="PPO"
     )
 
     parser.add_argument(
@@ -52,6 +52,13 @@ if __name__ == "__main__":
         help="Whether to log using wandb",
         dest="wandb",
         action="store_false"
+    )
+
+    parser.add_argument(
+        "--forward-action-space",
+        help="forward action space",
+        action="store_false",
+        dest='forward_action_space',
     )
     
     args = parser.parse_args()
@@ -62,14 +69,22 @@ if __name__ == "__main__":
 
     name = f"{current_reward.__name__}_{args.model_name}_{current_datetime.strftime('%Y-%m-%d-%H-%M')}"
 
-    #env = gym.make("donkey-steep-ascent-track-v0")
-    #env = ConsumptionWrapper(level=args.environment)
+    env_kwargs = {
+        "level": args.environment,
+    }
 
+    if args.forward_action_space:
+        conf = {
+            "throttle_min" :  0.0,
+            "throttle_max" : 1.0,
+        }
+        env_kwargs.update({"conf": conf})
+    
     # create vectorized environment
     env = make_vec_env(
         ConsumptionWrapper, 
         n_envs=1, 
-        env_kwargs={"level": args.environment}, 
+        env_kwargs=env_kwargs, 
         seed=42,
         vec_env_cls=DummyVecEnv,
         monitor_dir=f"../models/{name}",
@@ -85,6 +100,7 @@ if __name__ == "__main__":
         algo = getattr(sb3, args.model_name)
     except Exception as e:
         try :
+            print("why not ppo wtf")
             algo = getattr(sb3_contrib, args.model_name)
         except Exception as e:
             epsilonGreedy = True 
@@ -109,8 +125,15 @@ if __name__ == "__main__":
             sync_tensorboard=True,
             save_code=True,
         )
-
-    callback = retrieve_callbacks(env=env, name=name, config=config, use_wandb=args.wandb)
+    eval_frequency = 500
+    callback = retrieve_callbacks(
+        env=env,
+        name=name,
+        config=config,
+        save_frequency=eval_frequency,
+        eval_frequency=eval_frequency,
+        use_wandb=args.wandb)
+    
     # TODO : add wrapper for car that does not move at all for a number of steps (can't move uphill or does not move at all)
     pretrained_model =  algo.load(f"../models/pretrained_{model_name}_1.zip", 
         env=env,
@@ -120,7 +143,7 @@ if __name__ == "__main__":
     #print(pretrained_model.policy)
 
     env.reset()
-    pretrained_model.learn(total_timesteps=10*100_000, callback=callback)
+    pretrained_model.learn(total_timesteps=100_000, callback=callback)
     pretrained_model.save(f"../models/{name}")
 
     run.finish()

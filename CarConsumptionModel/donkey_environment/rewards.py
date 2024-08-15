@@ -41,12 +41,12 @@ def distance_based_reward_positive(self, done: bool) -> float:
     logger.debug(f"calc_reward : {self.hit} \t {done} \t {self.objective_distance}")
     if self.hit != "none":
         logger.debug(f"collision reward: {COLLISION_REWARD}")
-        return COLLISION_REWARD
+        return -1.0
     
     # will need to add checkpoint bonus
     elif done:
         logger.debug(f"done reward: {DONE_REWARD}")
-        return DONE_REWARD
+        return 100.0
 
     objective_distance_term = (1.0 - self.objective_distance)
     distance_from_center_term = math.fabs(self.distance_to_middle_line)
@@ -58,7 +58,7 @@ def distance_based_reward_positive(self, done: bool) -> float:
     weights = [0.5, 0.5]
     reward = weights[0] * objective_distance_term + weights[1] * distance_from_center_term
 
-    reward += (CHECKPOINT_REWARD * self.has_reached_checkpoint)
+    reward += (1.0 * self.has_reached_checkpoint)
     logger.debug(f"reward: {reward}")
     return reward
 

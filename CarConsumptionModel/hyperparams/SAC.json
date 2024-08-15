@@ -1,0 +1,13 @@
+{
+    "distance_based_reward_positive" : {
+        "learning_rate": 1e-4,
+        "buffer_size": 20000,
+        "learning_starts": 100,
+        "batch_size": 256,
+        "gamma": 0.9,
+        "tau": 5e-3,
+        "action_noise": null,
+        "train_freq": [1, "episode"]
+
+    }
+}

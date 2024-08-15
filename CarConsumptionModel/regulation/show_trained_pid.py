@@ -29,9 +29,9 @@ def loop_action(speed_controller : PIDController, steering_controller: PIDContro
     observed_forward_velocity = 0.0
     observed_distance = 0.6
 
-    # if log and log_file is not None:
-    #     log_file = open(log_file, "w")
-    #     log_file.write("time,observed_speed,target_speed,observed_distance\n")
+    if log and log_file is not None:
+        log_file = open(log_file, "w")
+        log_file.write("time,observed_speed,target_speed,observed_distance\n")
 
 
     while not done:
@@ -46,11 +46,11 @@ def loop_action(speed_controller : PIDController, steering_controller: PIDContro
         observed_distance = compute_distance_from_center_line(info)
         print(f"Distance: {observed_distance}, Speed: {observed_forward_velocity}")
 
-        # if log and log_file is not None:
-        #     log_file.write(f"{current_time},{observed_forward_velocity},{TARGET_SPEED},{observed_distance}\n")
+        if log and log_file is not None:
+            log_file.write(f"{current_time},{observed_forward_velocity},{TARGET_SPEED},{observed_distance}\n")
     
-    # if log and log_file is not None:
-    #     log_file.close()
+    if log and log_file is not None:
+        log_file.close()
     env.close()
 
 if __name__ == "__main__":
@@ -73,25 +73,17 @@ if __name__ == "__main__":
     steering_parameters = best_parameters["steering_controller"]
 
 
-    speed_controller = PIDController(
-        kp = 2.0,
-        ki = 0.1,
-        kd = 2.0,
-        min_output = -1.0,
-        max_output = 1.0
-    )
-    steering_controller = PIDController(
-        kp = 2.0,
-        ki = 1e-3,
-        kd = 10.0,
-        min_output = -1.0,
-        max_output = 1.0,
-    )
+    speed_parameters = best_parameters["speed_controller"]
+    steering_parameters = best_parameters["steering_controller"]
+
+    speed_controller = PIDController(**speed_parameters)
+
+    steering_controller = PIDController(**steering_parameters)
 
     loop_action(
         speed_controller, 
         steering_controller,
-        log=False, 
+        log=True, 
         log_file=f"../data/ziegler_nichols/test.csv"
     )
 
