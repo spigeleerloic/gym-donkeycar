@@ -57,12 +57,17 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         self.has_reached_checkpoint = False
         self.next_marker = 1.0
         self.destination_marker = None
+        self.not_moving_steps = 0
+        self.not_moving = False 
+
 
     def reset(self) -> None:
         super().reset()
         self.objective_reached = False
         self.cumulative_consumption = 0.0
         self.has_reached_checkpoint = False
+        self.not_moving_steps = 0
+        self.not_moving = False 
 
     
     def on_car_loaded(self, message: Dict[str, Any]) -> None:
@@ -91,6 +96,15 @@ class DonkeyHandler(DonkeyUnitySimHandler):
         # Disable reset
         if os.environ.get("RACE") == "True":
             self.over = False
+
+        if abs(self.speed) < 0.5:
+            if self.not_moving_steps > 100:
+                self.not_moving = True 
+                self.over = True 
+            else : 
+                self.not_moving_steps += 1
+        else:
+            self.not_moving_steps = 0
 
     def on_telemetry(self, message: Dict[str, Any]) -> None:
 

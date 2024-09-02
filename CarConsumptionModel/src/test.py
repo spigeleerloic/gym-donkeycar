@@ -17,21 +17,21 @@ from utils.environment import change_env_space, change_model_action_space
 from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 from agent.EpsilonGreedyDDPG import EpsilonGreedyDDPG
 
-script_dir = os.path.dirname(__file__)
-#default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
-default_path = os.path.join(script_dir, '../../../../pid_controller_simulator/donkey_sim.exe')
-if not os.path.exists(default_path):
-    raise ValueError(f"Default path '{default_path}' does not exist or is inaccessible.")
-else:
-    print(f"Using default simulator path: {default_path}")
+# script_dir = os.path.dirname(__file__)
+# #default_path = os.path.join(script_dir, '../../../simulator/linux_build.x86_64')
+# default_path = os.path.join(script_dir, '../../../../pid_controller_simulator/donkey_sim.exe')
+# if not os.path.exists(default_path):
+#     raise ValueError(f"Default path '{default_path}' does not exist or is inaccessible.")
+# else:
+#     print(f"Using default simulator path: {default_path}")
 
 
 parser = argparse.ArgumentParser(description='RL algorithm with consumption model applied to donkey car')
 
 parser.add_argument("--env_name", help="name of the donkey car environment", 
                     type=str, dest='environment', default="steep-ascent")
-parser.add_argument("-p", "--path" , help="path to the simulator if it is not running", 
-                    type=str, dest="path", default=default_path)
+# parser.add_argument("-p", "--path" , help="path to the simulator if it is not running", 
+#                     type=str, dest="path", default=default_path)
 
 parser.add_argument("--port", help="port in use for TCP connections",
                     default=9091, type=int, dest="port")
@@ -79,7 +79,7 @@ try:
 
         # ppo_agent = DDPG(policy, env, verbose=1, buffer_size=20_000)
 
-        ppo_agent = PPO.load(model_path, env)
+        ppo_agent = SAC.load(model_path)
         #ppo_agent = change_model_action_space(ppo_agent)
 
         #model = ppo_agent.policy.to("cpu")

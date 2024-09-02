@@ -114,18 +114,18 @@ class SDClient:
                 for s in readable:
                     try:
                         data = s.recv(1024 * 256)
-                    except ConnectionAbortedError:
+                    except ConnectionAbortedError as e:
                         logger.warn("socket connection aborted")
-                        print("socket connection aborted")
+                        print("socket connection aborted")  
+                        print(f"error message : {e.strerror}")
                         self.do_process_msgs = False
-                        
-                        #if self.reconnect():
-                            #break
 
                     # we don't technically need to convert from bytes to string
                     # for json.loads, but we do need a string in order to do
                     # the split by \n newline char. This seperates each json msg.
+
                     data = data.decode("utf-8")
+
 
                     localbuffer += data
 
