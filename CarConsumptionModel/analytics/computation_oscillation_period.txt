@@ -1,0 +1,20 @@
+>>> a = 1722507711.605008
+>>> time = [1722507716.184753, 1722507717.05808, 1722507718.033024, 1722507719.124714]
+>>> normalized = time - a
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: unsupported operand type(s) for -: 'list' and 'float'
+>>> import numpy as np
+>>> time = np.array(time)
+>>> normalized = time - a
+>>> normalized
+array([4.57974505, 5.45307207, 6.42801619, 7.51970601])
+>>> normalized[1] - normalized[0]
+0.8733270168304443
+>>> normalized[2] - normalized[1]
+0.9749441146850586
+>>> normalized[3] - normalized[2]
+1.0916898250579834
+>>> periods = np.array([0.8733270168304443, 0.9749441146850586, 1.0916898250579834])
+>>> print(np.mean(periods))
+0.9799869855244955

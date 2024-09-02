@@ -111,6 +111,13 @@ ENV/
 
 # Car consumption model
 
-.CarConsumptionModel/models/
-.CarConsumptionModel/src/wandb/
-.CarConsumptionModel/src/CarConsumptionModel.egg-info/
+CarConsumptionModel/models/
+CarConsumptionModel/src/wandb/
+CarConsumptionModel/src/CarConsumptionModel.egg-info/
+CarConsumptionModel/models/*
+CarConsumptionModel/data/*
+CarConsumptionModel/eval/*
+CarConsumptionModel/logs/*
+CarConsumptionModel/plots/*
+CarConsumptionModel/src/unitylog.txt
+CarConsumptionModel/src/wandb/*

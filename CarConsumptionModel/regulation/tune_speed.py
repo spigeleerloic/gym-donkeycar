@@ -12,12 +12,12 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from ..donkey_environment.ConsumptionWrapper import ConsumptionWrapper
+from donkey_environment.ConsumptionWrapper import ConsumptionWrapper
 from metrics import compute_forward_speed, compute_distance_from_center_line, ultimate_gain_to_controller
 logger = logging.getLogger(__name__)
 
 KP_MAX_CONVERGENCE_ITERATION = 100
-TARGET_SPEED = 0.25
+TARGET_SPEED = 1.0
 TARGET_STEERING = 0.035
 
 def tune_speed_ziegler_nichols(env : ConsumptionWrapper, use_logs=True, log_file="ziegler_nichols_speed_iterations.csv"):

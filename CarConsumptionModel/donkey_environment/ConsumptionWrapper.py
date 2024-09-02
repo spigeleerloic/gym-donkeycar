@@ -56,6 +56,8 @@ class ConsumptionWrapper(DonkeyEnv):
 
     def __init__(self, level: str, conf: Optional[Dict[str, Any]] = None):
         print("starting DonkeyGym env")
+
+        print(f"conf : {conf} \t conf type : {type(conf)}")
         self.viewer = None
         self.proc = None
 
@@ -99,6 +101,8 @@ class ConsumptionWrapper(DonkeyEnv):
             high=np.array([float(conf["steer_limit"]), float(conf["throttle_max"])]),
             dtype=np.float32,
         )
+
+        print(f"action space : {self.action_space.low} \t {self.action_space.high}")
 
         # camera sensor data
         self.observation_space = spaces.Box(0, self.VAL_PER_PIXEL, self.viewer.get_sensor_size(), dtype=np.uint8)
